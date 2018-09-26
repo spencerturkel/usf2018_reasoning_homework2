@@ -1,0 +1,10 @@
+**/*
+
+!.gitignore
+!.travis.yml
+!LICENSE
+!Pipfile
+
+!*.md
+
+!*.py
