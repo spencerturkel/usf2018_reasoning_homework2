@@ -38,7 +38,7 @@ op = FORALL
    | OR
    | IMPLIES
    | NOT
-index = [0-9]+
+index = \d+
 object = [a-z0-9]+
 predicate = {w | w in Regex("[A-Z][a-z0-9]+") && w not in op}
 inference-rule = S
@@ -115,12 +115,12 @@ This is the *supposition*, which justifies anything we assume at the start of th
 ```
 UCONST |- {} -> p
 ```
-This is the *universal variable*, which justifies an arbitrary object when proving a universal proposition.
+This is the *universal constant*, which justifies an arbitrary object when proving a universal proposition.
 
 ```
 ECONST |- {(EXISTS x (P x))} -> (ECONST y (P y))
 ```
-This is the *existential variable*, which justifies:
+This is the *existential constant*, which justifies:
 - the existence of an object `y`
 - and the proof of its property `P`
 
