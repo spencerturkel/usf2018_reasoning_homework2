@@ -40,7 +40,7 @@ op = FORALL
    | NOT
 index = [0-9]+
 object = [a-z0-9]+
-predicate = {w | w in Regex("A-Z[a-z0-9]+") && w not in op}
+predicate = {w | w in Regex("[A-Z][a-z0-9]+") && w not in op}
 inference-rule = S
                | CI
                | CE
