@@ -19,7 +19,7 @@ Our assignment is to verify [Fitch-style proofs](https://en.wikipedia.org/wiki/F
 - `verifyProof(P)` may assume that:
     * All input is well-formed.
     * All operators (except `NOT`) have two arguments.
-    * All object and predicate symbols will be lower-case alphanumeric strings.
+    * All symbols will be lower-case alphanumeric strings.
 # Input
 ## Lexemes
 ```
@@ -29,18 +29,14 @@ Our assignment is to verify [Fitch-style proofs](https://en.wikipedia.org/wiki/F
 ]
 ,
 SUBP
+quantified_constant = UCONST | ECONST
 op = FORALL
    | EXISTS
-   | UCONST
-   | ECONST
    | CONTR
    | AND
    | OR
    | IMPLIES
    | NOT
-index = \d+
-object = [a-z0-9]+
-predicate = {w | w in Regex("[A-Z][a-z0-9]+") && w not in op}
 inference-rule = S
                | CI
                | CE
@@ -56,8 +52,8 @@ inference-rule = S
                | EE
                | XI
                | XE
-               | UCONST
-               | ECONST
+index = \d+
+symbol = [a-z0-9]+
 ```
 ## Grammar
 Let `ε` be the empty string.
@@ -66,21 +62,21 @@ Let `ε` be the empty string.
 proof = ( line )
 line = SUBP number many-proofs | index expr justification
 many-proofs = proof many-proofs | ε
-expr = object | complex-expr
+expr = symbol | complex-expr
 justification = ( [ indices ] inference-rule )
 complex-expr = ( formula )
 indices = index trailing-indices | ε
 trailing-indices = , index trailing-indices | ε
-formula = FORALL object expr
-        | EXISTS object expr
-        | UCONST object
-        | ECONST object expr
+formula = FORALL symbol expr
+        | EXISTS symbol expr
+        | UCONST symbol
+        | ECONST symbol expr
         | AND expr expr
         | OR expr expr
         | IMPLIES expr expr
         | NOT expr
         | CONTR
-        | predicate expr
+        | object expr
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.
