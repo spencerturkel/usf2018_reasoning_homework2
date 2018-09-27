@@ -83,8 +83,8 @@ formula = FORALL object expr
         | predicate expr
 ```
 # Inference Rules
-`P => Q` symbolizes a sub-proof of `Q` given `P`
-`R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` when all of `{P_i | 0 <= i < n}` are valid.
+`R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.
+`C => p` symbolizes a sub-proof of `p` given the additional context `C`.
 
 ## Formal Rules
 ```
@@ -93,15 +93,15 @@ CE |- {(AND p q)} -> p
 CE |- {(AND p q)} -> q
 DI |- {p} -> (OR p q)
 DI |- {q} -> (OR p q)
-DE |- {p => r, q => r, (OR p q)} -> r
-II |- {p => q} -> (IMPLIES p q)
+DE |- {{p} => r, {q} => r, (OR p q)} -> r
+II |- {{p} => q} -> (IMPLIES p q)
 IE |- {(IMPLIES p q), p} -> q
-NI |- {p => (CONTR)} -> (NOT p)
+NI |- {{p} => (CONTR)} -> (NOT p)
 NE |- {(NOT (NOT p))} -> p
-AI |- {(UCONST x) => P x} -> (FORALL y (P y))
+AI |- {{x} => P x} -> (FORALL y (P y))
 AE |- {(FORALL x (P x)), y} -> P y
 EI |- {P x} -> (EXISTS y (P y))
-EE |- {(EXISTS x (P x)), (ECONST y (P y)) => q} -> q
+EE |- {(EXISTS x (P x)), {y, P y} => q} -> q
 XI |- {p, (NOT p)} -> (CONTR)
 XE |- {(CONTR)} -> p
 ```
@@ -118,7 +118,15 @@ UCONST |- {} -> p
 This is the *universal variable*, which justifies an arbitrary object when proving a universal proposition.
 
 ```
-ECONST |- {(ECONST x (P x))} -> x
-ECONST |- {(ECONST x (P x))} -> P x
+ECONST |- {(EXISTS x (P x))} -> (ECONST y (P y))
 ```
-This is a shortened form of the *existential elimination*, which justifies the existence of an object as well as the proof of its property.
+This is the *existential variable*, which justifies:
+- the existence of an object `y`
+- and the proof of its property `P`
+
+when using an existential proposition.
+
+```
+{(ECONST x (P x))} = {x, (P x)}
+```
+A line proving `(ECONST x (P x))` may be treated as a line proving both `x` and `P x`.
