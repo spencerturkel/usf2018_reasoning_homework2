@@ -32,7 +32,7 @@ SUBP
 op = FORALL
    | EXISTS
    | UCONST
-   | EXCONST
+   | ECONST
    | CONTR
    | AND
    | OR
@@ -56,28 +56,69 @@ inference-rule = S
                | EE
                | XI
                | XE
+               | UCONST
+               | ECONST
 ```
 ## Grammar
+Let `ε` be the empty string.
+
 ```
 proof = ( line )
 line = SUBP number many-proofs | index expr justification
-many-proofs = proof many-proofs |
-expr = object | list
+many-proofs = proof many-proofs | ε
+expr = object | complex-expr
 justification = ( [ indices ] inference-rule )
-list = ( formula )
-indices = index , indices |
-formula = FORALL symbol expr
-        | EXISTS symbol expr
-        | UCONST symbol
-        | ECONST symbol expr
+complex-expr = ( formula )
+indices = index trailing-indices | ε
+trailing-indices = , index trailing-indices | ε
+formula = FORALL object expr
+        | EXISTS object expr
+        | UCONST object
+        | ECONST object expr
         | AND expr expr
         | OR expr expr
         | IMPLIES expr expr
         | NOT expr
         | CONTR
-        | predicate
+        | predicate expr
 ```
 # Inference Rules
+`P => Q` symbolizes a sub-proof of `Q` given `P`
+`R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` when all of `{P_i | 0 <= i < n}` are valid.
+
+## Formal Rules
+```
+CI |- {p, q} -> (AND p q)
+CE |- {(AND p q)} -> p
+CE |- {(AND p q)} -> q
+DI |- {p} -> (OR p q)
+DI |- {q} -> (OR p q)
+DE |- {p => r, q => r, (OR p q)} -> r
+II |- {p => q} -> (IMPLIES p q)
+IE |- {(IMPLIES p q), p} -> q
+NI |- {p => (CONTR)} -> (NOT p)
+NE |- {(NOT (NOT p))} -> p
+AI |- {(UCONST x) => P x} -> (FORALL y (P y))
+AE |- {(FORALL x (P x)), y} -> P y
+EI |- {P x} -> (EXISTS y (P y))
+EE |- {(EXISTS x (P x)), (ECONST y (P y)) => q} -> q
+XI |- {p, (NOT p)} -> (CONTR)
+XE |- {(CONTR)} -> p
 ```
 
+## Informal Rules
 ```
+S |- {} -> p
+```
+This is the *supposition*, which justifies anything we assume at the start of the proof.
+
+```
+UCONST |- {} -> p
+```
+This is the *universal variable*, which justifies an arbitrary object when proving a universal proposition.
+
+```
+ECONST |- {(ECONST x (P x))} -> x
+ECONST |- {(ECONST x (P x))} -> P x
+```
+This is a shortened form of the *existential elimination*, which justifies the existence of an object as well as the proof of its property.
