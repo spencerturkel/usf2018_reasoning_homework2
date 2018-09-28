@@ -73,11 +73,11 @@ class Lexer:
     An iterable class for lexing.
     You can also peek at the next character (excluding whitespace).
 
-    >>> list(Lexer('az,() '))
-    ['az', CommonToken.comma, CommonToken.left_parenthesis, CommonToken.right_parenthesis]
-    >>> list(Lexer(' [\t] \t     ab123'))
-    [CommonToken.left_bracket, CommonToken.right_bracket, 'ab123']
-    >>> l = Lexer(' [\t] \t     ab123')
+    >>> list(Lexer('az,() 123'))
+    ['az', CommonToken.comma, CommonToken.left_parenthesis, CommonToken.right_parenthesis, 123]
+    >>> list(Lexer(' [\t] \t  0   ab123'))
+    [CommonToken.left_bracket, CommonToken.right_bracket, 0, 'ab123']
+    >>> l = Lexer(' [\t] \t  0   ab123')
     >>> l.peek()
     CommonToken.left_bracket
     >>> next(l)
@@ -86,6 +86,10 @@ class Lexer:
     CommonToken.right_bracket
     >>> next(l)
     CommonToken.right_bracket
+    >>> l.peek()
+    0
+    >>> next(l)
+    0
     >>> l.peek()
     'ab123'
     >>> next(l)
@@ -185,13 +189,9 @@ class Lexer:
             return InferenceRule.contradiction_elimination
         match = self._next_word_match(Lexer._index_regex)
         if match:
-            index_lexeme = match.group(0)
-            return index_lexeme
+            return int(match.group(0))
         match = self._next_word_match(Lexer._object_regex)
-        if match:
-            object_lexeme = match.group(0)
-            return object_lexeme
-        return None
+        return match.group(0) if match else None
 
     def _next_char(self):
         while True:
@@ -306,7 +306,7 @@ class Lexer:
         if match:
             index_lexeme = match.group(0)
             self.index += len(index_lexeme)
-            return index_lexeme
+            return int(index_lexeme)
         match = self._next_word_match(Lexer._object_regex)
         if match:
             object_lexeme = match.group(0)
