@@ -315,39 +315,32 @@ class Lexer:
         raise InputSyntaxError
 
 
-def lex(proof):
-    """
-    This is a lexer for the input proofs.
-
-    :param proof: a Fitch-style proof represented as an s-expression. See assignment or README.
-    :return:
-        a generator of lexemes,
-        using previously defined tokens instead of strings where appropriate.
-    """
-    index = 0
-    while True:
-        item = proof[index]
-        if item in whitespace:
-            continue
-        elif item == '(':
-            yield CommonToken.left_parenthesis
-        elif item == ')':
-            yield CommonToken.right_parenthesis
-        elif item == '[':
-            yield CommonToken.left_bracket
-        elif item == ']':
-            yield CommonToken.right_bracket
-        elif item == ',':
-            yield CommonToken.right_bracket
-
 def parse(lexemes):
     """
-    This is a recursive descent parser for the input proofs.
+    This is a recursive descent parser for the input lexemes, returning a structured Proof.
 
     :param lexemes: a Fitch-style proof represented as a generator of lexemes.
-    :return:
-        nested lists with identical structure to the input proof,
-        using previously defined tokens instead of strings where appropriate.
+    :return: an element of type Proof (defined below).
+    :except InputSyntaxError: when the proof cannot be parsed.
+
+    Result type::
+
+        Proof = Union[Tuple[int, List[Proof]], Tuple[int, Expr, Justification]]
+        Expr = Union[ str,
+                      Op.universal * str * Expr,
+                      Op.existence * str * Expr,
+                      QuantifiedConstant.universal_constant * str,
+                      QuantifiedConstant.existential_constant * str * Expr,
+                      QuantifiedConstant.universal_constant * str,
+                      Op.conjunction * Expr * Expr,
+                      Op.disjunction * Expr * Expr,
+                      Op.implication * Expr * Expr,
+                      Op.negation * Expr,
+                      Op.contradiction,
+                      str * Expr,
+                    ]
+        Justification = List[int] * InferenceRule
+
     """
 
 
