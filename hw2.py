@@ -315,33 +315,131 @@ class Lexer:
         raise InputSyntaxError
 
 
-def parse(lexemes):
+class ParseError(Exception):
+    pass
+
+class Parser:
     """
     This is a recursive descent parser for the input lexemes, returning a structured Proof.
 
-    :param lexemes: a Fitch-style proof represented as a generator of lexemes.
+    :param text: a Fitch-style proof (see README or assignment requirements for format).
     :return: an element of type Proof (defined below).
-    :except InputSyntaxError: when the proof cannot be parsed.
+    :except ParseError: when the proof cannot be parsed.
 
     Result type::
 
         Proof = Union[Tuple[int, List[Proof]], Tuple[int, Expr, Justification]]
         Expr = Union[ str,
-                      Op.universal * str * Expr,
-                      Op.existence * str * Expr,
-                      QuantifiedConstant.universal_constant * str,
-                      QuantifiedConstant.existential_constant * str * Expr,
-                      QuantifiedConstant.universal_constant * str,
-                      Op.conjunction * Expr * Expr,
-                      Op.disjunction * Expr * Expr,
-                      Op.implication * Expr * Expr,
-                      Op.negation * Expr,
+                      Tuple[Op.universal,  str,  Expr],
+                      Tuple[Op.existence,  str,  Expr],
+                      Tuple[QuantifiedConstant.universal_constant,  str],
+                      Tuple[QuantifiedConstant.existential_constant,  str,  Expr],
+                      Tuple[Op.conjunction,  Expr,  Expr],
+                      Tuple[Op.disjunction,  Expr,  Expr],
+                      Tuple[Op.implication,  Expr,  Expr],
+                      Tuple[Op.negation,  Expr],
                       Op.contradiction,
-                      str * Expr,
+                      Tuple[str,  Expr],
                     ]
         Justification = List[int] * InferenceRule
 
+    >>> p = Parser()
+    >>> p.parse('(10 (AND p (q x)) ([] S))')
+    (10, (Op.conjunction, 'p', ('q', 'x')), ([], InferenceRule.supposition))
     """
+
+    def parse(self, text):
+        self._scanner = Lexer(text)
+        self._expect_next(CommonToken.left_parenthesis)
+        line = self._line()
+        self._expect_next(CommonToken.right_parenthesis)
+        return line
+
+    def _expect_next(self, token):
+        if next(self._scanner) != token:
+            raise ParseError
+
+    def _line(self):
+        token = self._next()
+        if token == CommonToken.sub_proof:
+            return self._next(), self._many_proofs()
+        if isinstance(token, int):
+            return token, self._expr(), self._justification()
+        raise ParseError
+
+    def _next(self):
+        return next(self._scanner)
+
+    def _many_proofs(self):
+        many_proofs = []
+        while self._peek() not in [CommonToken.right_parenthesis, None]:
+            many_proofs.append(self.parse())
+        return many_proofs
+
+    def _peek(self):
+        return self._scanner.peek()
+
+    def _expr(self):
+        token = self._next()
+        if token == CommonToken.left_parenthesis:
+            complex_expr = self._complex_expr()
+            self._expect_next(CommonToken.right_parenthesis)
+            return complex_expr
+        return self._symbol()
+
+    def _justification(self):
+        self._expect_next(CommonToken.left_parenthesis)
+        self._expect_next(CommonToken.left_bracket)
+        indices = self._indices()
+        self._expect_next(CommonToken.right_bracket)
+        inference_rule = self._next()
+        if not isinstance(inference_rule, InferenceRule):
+            raise ParseError
+        self._expect_next(CommonToken.right_parenthesis)
+        return indices, inference_rule
+
+    def _complex_expr(self):
+        self._expect_next(CommonToken.left_parenthesis)
+        formula = self._formula()
+        self._expect_next(CommonToken.right_parenthesis)
+        return formula
+
+    def _indices(self):
+        token = self._peek()
+        if isinstance(token, int):
+            return [token] + self._trailing_indices()
+        return []
+
+    def _trailing_indices(self):
+        trailing_indices = []
+        while self._peek() == CommonToken.comma:
+            self._next()
+            index = self._next()
+            if not isinstance(index, int):
+                raise ParseError
+            trailing_indices.append(index)
+        pass
+
+    def _formula(self):
+        token = self._next()
+        if token in [Op.universal, Op.existence, QuantifiedConstant.existential_constant]:
+            if isinstance(token, str):
+                return token, self._symbol(), self._expr()
+            raise ParseError
+        if token == QuantifiedConstant.universal_constant:
+            return token, self._symbol()
+        if token in [Op.conjunction, Op.disjunction, Op.implication]:
+            return token, self._expr(), self._expr()
+        if token == Op.negation or isinstance(token, str):
+            return token, self._expr()
+        if token == Op.contradiction:
+            return token
+
+    def _symbol(self):
+        symbol = self._next()
+        if isinstance(symbol, str):
+            return symbol
+        raise ParseError
 
 
 # noinspection PyPep8Naming
