@@ -1,12 +1,8 @@
 """
 Created by Spencer Turkel on 09/27/2018.
 """
-
+import re
 from enum import Enum, unique
-from re import compile as compile_regex
-
-
-# first, defining some token enums for the lexer
 from string import whitespace
 
 
@@ -14,6 +10,9 @@ from string import whitespace
 class QuantifiedConstant(Enum):
     universal_constant = 1
     existential_constant = 2
+
+    def __repr__(self):
+        return 'QuantifiedConstant.{0}'.format(self.name)
 
 
 @unique
@@ -25,6 +24,9 @@ class Op(Enum):
     disjunction = 5
     implication = 6
     negation = 7
+
+    def __repr__(self):
+        return 'Op.{0}'.format(self.name)
 
 
 @unique
@@ -45,6 +47,9 @@ class InferenceRule(Enum):
     contradiction_introduction = 14
     contradiction_elimination = 15
 
+    def __repr__(self):
+        return 'InferenceRule.{0}'.format(self.name)
+
 
 @unique
 class CommonToken(Enum):
@@ -55,11 +60,8 @@ class CommonToken(Enum):
     comma = 5
     sub_proof = 6
 
-
-# regular expressions compiled for lexing
-index_regex = compile_regex(r'\d+')
-object_regex = compile_regex(r'[a-z0-9]+')
-predicate_regex = compile_regex(r'[A-Z][a-z0-9]+')
+    def __repr__(self):
+        return 'CommonToken.{0}'.format(self.name)
 
 
 class InputSyntaxError(Exception):
@@ -70,7 +72,40 @@ class Lexer:
     """
     An iterable class for lexing.
     You can also peek at the next character (excluding whitespace).
+
+    >>> list(Lexer('az,() '))
+    ['az', CommonToken.comma, CommonToken.left_parenthesis, CommonToken.right_parenthesis]
+    >>> list(Lexer(' [\t] \t     ab123'))
+    [CommonToken.left_bracket, CommonToken.right_bracket, 'ab123']
+    >>> l = Lexer(' [\t] \t     ab123')
+    >>> l.peek()
+    CommonToken.left_bracket
+    >>> next(l)
+    CommonToken.left_bracket
+    >>> l.peek()
+    CommonToken.right_bracket
+    >>> next(l)
+    CommonToken.right_bracket
+    >>> l.peek()
+    'ab123'
+    >>> next(l)
+    'ab123'
+    >>> l.peek()
+    >>> next(l)
+    Traceback (most recent call last):
+        ...
+    StopIteration
+    >>> l = Lexer('Abc')
+    >>> l.peek()
+    >>> next(l)
+    Traceback (most recent call last):
+        ...
+    hw2.InputSyntaxError
     """
+
+    # regular expressions compiled for lexing
+    _index_regex = re.compile(r'\d+')
+    _object_regex = re.compile('[a-z0-9]+')
 
     def __init__(self, text):
         self.length = len(text)
@@ -82,25 +117,101 @@ class Lexer:
 
     def peek(self):
         """
-        Peeks at the next non-whitespace character in the text.
-        :return: The next non-whitespace character in the text.
-        :except InputSyntaxError: if there are no more non-whitespace characters
+        Peeks at the next lexeme in the text.
+        :return: The next lexeme in the text, or None if there are none.
         """
+        if self.index == self.length:
+            return None
+        next_char = self._next_char()
+        if next_char == '(':
+            return CommonToken.left_parenthesis
+        if next_char == ')':
+            return CommonToken.right_parenthesis
+        if next_char == '[':
+            return CommonToken.left_bracket
+        if next_char == ']':
+            return CommonToken.right_bracket
+        if next_char == ',':
+            return CommonToken.comma
+        if self._next_word_is('SUBP'):
+            return CommonToken.sub_proof
+        if self._next_word_is('UCONST'):
+            return QuantifiedConstant.universal_constant
+        if self._next_word_is('ECONST'):
+            return QuantifiedConstant.existential_constant
+        if self._next_word_is('FORALL'):
+            return Op.universal
+        if self._next_word_is('EXISTS'):
+            return Op.existence
+        if self._next_word_is('CONTR'):
+            return Op.contradiction
+        if self._next_word_is('AND'):
+            return Op.conjunction
+        if self._next_word_is('OR'):
+            return Op.disjunction
+        if self._next_word_is('IMPLIES'):
+            return Op.implication
+        if self._next_word_is('NOT'):
+            return Op.negation
+        if self._next_word_is('S'):
+            return InferenceRule.supposition
+        if self._next_word_is('CI'):
+            return InferenceRule.conjunction_introduction
+        if self._next_word_is('CE'):
+            return InferenceRule.conjunction_elimination
+        if self._next_word_is('DI'):
+            return InferenceRule.disjunction_introduction
+        if self._next_word_is('DE'):
+            return InferenceRule.disjunction_elimination
+        if self._next_word_is('II'):
+            return InferenceRule.implication_introduction
+        if self._next_word_is('IE'):
+            return InferenceRule.implication_elimination
+        if self._next_word_is('NI'):
+            return InferenceRule.negation_introduction
+        if self._next_word_is('NE'):
+            return InferenceRule.negation_elimination
+        if self._next_word_is('AI'):
+            return InferenceRule.universal_introduction
+        if self._next_word_is('AE'):
+            return InferenceRule.universal_elimination
+        if self._next_word_is('EI'):
+            return InferenceRule.existential_introduction
+        if self._next_word_is('EE'):
+            return InferenceRule.existential_elimination
+        if self._next_word_is('XI'):
+            return InferenceRule.contradiction_introduction
+        if self._next_word_is('XE'):
+            return InferenceRule.contradiction_elimination
+        match = self._next_word_match(Lexer._index_regex)
+        if match:
+            index_lexeme = match.group(0)
+            return index_lexeme
+        match = self._next_word_match(Lexer._object_regex)
+        if match:
+            object_lexeme = match.group(0)
+            return object_lexeme
+        return None
+
+    def _next_char(self):
         while True:
+            if self.index == self.length:
+                raise StopIteration
             ch = self.text[self.index]
             if ch not in whitespace:
                 return ch
             self.index += 1
-            if self.index == self.length:
-                raise InputSyntaxError
 
     def _next_word_is(self, word):
         return self.text.startswith(word, self.index)
 
+    def _next_word_match(self, regex):
+        return regex.match(self.text, self.index)
+
     def __next__(self):
         if self.index == self.length:
             raise StopIteration
-        next_char = self.peek()
+        next_char = self._next_char()
         if next_char == '(':
             self.index += len('(')
             return CommonToken.left_parenthesis
@@ -191,6 +302,16 @@ class Lexer:
         if self._next_word_is('XE'):
             self.index += len('XE')
             return InferenceRule.contradiction_elimination
+        match = self._next_word_match(Lexer._index_regex)
+        if match:
+            index_lexeme = match.group(0)
+            self.index += len(index_lexeme)
+            return index_lexeme
+        match = self._next_word_match(Lexer._object_regex)
+        if match:
+            object_lexeme = match.group(0)
+            self.index += len(object_lexeme)
+            return object_lexeme
         raise InputSyntaxError
 
 
