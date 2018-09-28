@@ -62,9 +62,8 @@ Let `ε` be the empty string.
 proof = ( line )
 line = SUBP number many-proofs | index expr justification
 many-proofs = proof many-proofs | ε
-expr = symbol | complex-expr
+expr = symbol | ( formula )
 justification = ( [ indices ] inference-rule )
-complex-expr = ( formula )
 indices = index trailing-indices | ε
 trailing-indices = , index trailing-indices | ε
 formula = FORALL symbol expr

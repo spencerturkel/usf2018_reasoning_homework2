@@ -343,13 +343,39 @@ class Parser:
                     ]
         Justification = List[int] * InferenceRule
 
-    >>> p = Parser()
-    >>> p.parse('(10 (AND p (q x)) ([] S))')
-    (10, (Op.conjunction, 'p', ('q', 'x')), ([], InferenceRule.supposition))
+    >>> p = Parser('(10 (AND p (q x)) ([5] S))')
+    >>> p.parse()
+    (10, (Op.conjunction, 'p', ('q', 'x')), ([5], InferenceRule.supposition))
+    >>> p = Parser('(SUBP 5 (10 (IMPLIES p (q x)) ([] S)) (20 p ([] S)) (30 (q x) ([10, 20] IE)))')
+    >>> p.parse()
+    (5, [(10, (Op.implication, 'p', ('q', 'x')), ([], InferenceRule.supposition)), (20, 'p', ([], InferenceRule.supposition)), (30, ('q', 'x'), ([10, 20], InferenceRule.implication_elimination))])
+    >>> p = Parser('(10 (OR p q) ([] S))')
+    >>> p.parse()
+    (10, (Op.disjunction, 'p', 'q'), ([], InferenceRule.supposition))
+    >>> p = Parser('(10 (FORALL p (q r)) ([] S))')
+    >>> p.parse()
+    (10, (Op.universal, 'p', ('q', 'r')), ([], InferenceRule.supposition))
+    >>> p = Parser('(10 (EXISTS p (q r)) ([] S))')
+    >>> p.parse()
+    (10, (Op.existence, 'p', ('q', 'r')), ([], InferenceRule.supposition))
+    >>> p = Parser('(10 (UCONST p) ([] UCONST))')
+    >>> p.parse()
+    (10, (QuantifiedConstant.universal_constant, 'p'), ([], QuantifiedConstant.universal_constant))
+    >>> p = Parser('(10 (ECONST p (q p)) ([] ECONST))')
+    >>> p.parse()
+    (10, (QuantifiedConstant.existential_constant, 'p', ('q', 'p')), ([], QuantifiedConstant.existential_constant))
+    >>> p = Parser('(10 (NOT p) ([] S))')
+    >>> p.parse()
+    (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
+    >>> p = Parser('(10 (CONTR) ([] S))')
+    >>> p.parse()
+    (10, Op.contradiction, ([], InferenceRule.supposition))
     """
 
-    def parse(self, text):
+    def __init__(self, text):
         self._scanner = Lexer(text)
+
+    def parse(self):
         self._expect_next(CommonToken.left_parenthesis)
         line = self._line()
         self._expect_next(CommonToken.right_parenthesis)
@@ -382,50 +408,47 @@ class Parser:
     def _expr(self):
         token = self._next()
         if token == CommonToken.left_parenthesis:
-            complex_expr = self._complex_expr()
+            formula = self._formula()
             self._expect_next(CommonToken.right_parenthesis)
-            return complex_expr
-        return self._symbol()
+            return formula
+        if isinstance(token, str):
+            return token
+        raise ParseError
 
     def _justification(self):
         self._expect_next(CommonToken.left_parenthesis)
         self._expect_next(CommonToken.left_bracket)
         indices = self._indices()
-        self._expect_next(CommonToken.right_bracket)
-        inference_rule = self._next()
-        if not isinstance(inference_rule, InferenceRule):
+        rule = self._next()
+        if not isinstance(rule, InferenceRule) and not isinstance(rule, QuantifiedConstant):
             raise ParseError
         self._expect_next(CommonToken.right_parenthesis)
-        return indices, inference_rule
-
-    def _complex_expr(self):
-        self._expect_next(CommonToken.left_parenthesis)
-        formula = self._formula()
-        self._expect_next(CommonToken.right_parenthesis)
-        return formula
+        return indices, rule
 
     def _indices(self):
-        token = self._peek()
+        token = self._next()
         if isinstance(token, int):
             return [token] + self._trailing_indices()
-        return []
+        if token == CommonToken.right_bracket:
+            return []
+        raise ParseError
 
     def _trailing_indices(self):
         trailing_indices = []
-        while self._peek() == CommonToken.comma:
-            self._next()
-            index = self._next()
-            if not isinstance(index, int):
-                raise ParseError
-            trailing_indices.append(index)
-        pass
+        while True:
+            token = self._next()
+            if token == CommonToken.comma:
+                index = self._next()
+                if not isinstance(index, int):
+                    raise ParseError
+                trailing_indices.append(index)
+            elif token == CommonToken.right_bracket:
+                return trailing_indices
 
     def _formula(self):
         token = self._next()
         if token in [Op.universal, Op.existence, QuantifiedConstant.existential_constant]:
-            if isinstance(token, str):
-                return token, self._symbol(), self._expr()
-            raise ParseError
+            return token, self._symbol(), self._expr()
         if token == QuantifiedConstant.universal_constant:
             return token, self._symbol()
         if token in [Op.conjunction, Op.disjunction, Op.implication]:
