@@ -318,64 +318,68 @@ class Lexer:
 class ParseError(Exception):
     pass
 
+
 class Parser:
-    """
-    This is a recursive descent parser for the input lexemes, returning a structured Proof.
+    def __init__(self):
+        self._scanner = None
 
-    :param text: a Fitch-style proof (see README or assignment requirements for format).
-    :return: an element of type Proof (defined below).
-    :except ParseError: when the proof cannot be parsed.
+    def parse(self, text):
+        """
+        This is a recursive descent parser for the input lexemes, returning a structured Proof.
 
-    Result type::
+        :param text: a Fitch-style proof (see README or assignment requirements for format).
+        :return: an element of type Proof (defined below).
+        :except ParseError: when the proof cannot be parsed.
 
-        Proof = Union[Tuple[int, List[Proof]], Tuple[int, Expr, Justification]]
-        Expr = Union[ str,
-                      Tuple[Op.universal,  str,  Expr],
-                      Tuple[Op.existence,  str,  Expr],
-                      Tuple[QuantifiedConstant.universal_constant,  str],
-                      Tuple[QuantifiedConstant.existential_constant,  str,  Expr],
-                      Tuple[Op.conjunction,  Expr,  Expr],
-                      Tuple[Op.disjunction,  Expr,  Expr],
-                      Tuple[Op.implication,  Expr,  Expr],
-                      Tuple[Op.negation,  Expr],
-                      Op.contradiction,
-                      Tuple[str,  Expr],
-                    ]
-        Justification = List[int] * InferenceRule
+        Result type::
 
-    >>> p = Parser('(10 (AND p (q x)) ([5] S))')
-    >>> p.parse()
-    (10, (Op.conjunction, 'p', ('q', 'x')), ([5], InferenceRule.supposition))
-    >>> p = Parser('(SUBP 5 (10 (IMPLIES p (q x)) ([] S)) (20 p ([] S)) (30 (q x) ([10, 20] IE)))')
-    >>> p.parse()
-    (5, [(10, (Op.implication, 'p', ('q', 'x')), ([], InferenceRule.supposition)), (20, 'p', ([], InferenceRule.supposition)), (30, ('q', 'x'), ([10, 20], InferenceRule.implication_elimination))])
-    >>> p = Parser('(10 (OR p q) ([] S))')
-    >>> p.parse()
-    (10, (Op.disjunction, 'p', 'q'), ([], InferenceRule.supposition))
-    >>> p = Parser('(10 (FORALL p (q r)) ([] S))')
-    >>> p.parse()
-    (10, (Op.universal, 'p', ('q', 'r')), ([], InferenceRule.supposition))
-    >>> p = Parser('(10 (EXISTS p (q r)) ([] S))')
-    >>> p.parse()
-    (10, (Op.existence, 'p', ('q', 'r')), ([], InferenceRule.supposition))
-    >>> p = Parser('(10 (UCONST p) ([] UCONST))')
-    >>> p.parse()
-    (10, (QuantifiedConstant.universal_constant, 'p'), ([], QuantifiedConstant.universal_constant))
-    >>> p = Parser('(10 (ECONST p (q p)) ([] ECONST))')
-    >>> p.parse()
-    (10, (QuantifiedConstant.existential_constant, 'p', ('q', 'p')), ([], QuantifiedConstant.existential_constant))
-    >>> p = Parser('(10 (NOT p) ([] S))')
-    >>> p.parse()
-    (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
-    >>> p = Parser('(10 (CONTR) ([] S))')
-    >>> p.parse()
-    (10, Op.contradiction, ([], InferenceRule.supposition))
-    """
+            Proof = Union[Tuple[int, List[Proof]], Tuple[int, Expr, Justification]]
+            Expr = Union[ str,
+                          Tuple[Op.universal,  str,  Expr],
+                          Tuple[Op.existence,  str,  Expr],
+                          Tuple[QuantifiedConstant.universal_constant,  str],
+                          Tuple[QuantifiedConstant.existential_constant,  str,  Expr],
+                          Tuple[Op.conjunction,  Expr,  Expr],
+                          Tuple[Op.disjunction,  Expr,  Expr],
+                          Tuple[Op.implication,  Expr,  Expr],
+                          Tuple[Op.negation,  Expr],
+                          Op.contradiction,
+                          Tuple[str,  Expr],
+                        ]
+            Justification = List[int] * InferenceRule
 
-    def __init__(self, text):
+        >>> p = Parser()
+        >>> p.parse('(10 (AND p (q x)) ([5] S))')
+        (10, (Op.conjunction, 'p', ('q', 'x')), ([5], InferenceRule.supposition))
+        >>> p = Parser()
+        >>> p.parse('(SUBP 5 (10 (IMPLIES p (q x)) ([] S)) (20 p ([] S)) (30 (q x) ([10, 20] IE)))')
+        (5, [(10, (Op.implication, 'p', ('q', 'x')), ([], InferenceRule.supposition)), (20, 'p', ([], InferenceRule.supposition)), (30, ('q', 'x'), ([10, 20], InferenceRule.implication_elimination))])
+        >>> p = Parser()
+        >>> p.parse('(10 (OR p q) ([] S))')
+        (10, (Op.disjunction, 'p', 'q'), ([], InferenceRule.supposition))
+        >>> p = Parser()
+        >>> p.parse('(10 (FORALL p (q r)) ([] S))')
+        (10, (Op.universal, 'p', ('q', 'r')), ([], InferenceRule.supposition))
+        >>> p = Parser()
+        >>> p.parse('(10 (EXISTS p (q r)) ([] S))')
+        (10, (Op.existence, 'p', ('q', 'r')), ([], InferenceRule.supposition))
+        >>> p = Parser()
+        >>> p.parse('(10 (UCONST p) ([] UCONST))')
+        (10, (QuantifiedConstant.universal_constant, 'p'), ([], QuantifiedConstant.universal_constant))
+        >>> p = Parser()
+        >>> p.parse('(10 (ECONST p (q p)) ([] ECONST))')
+        (10, (QuantifiedConstant.existential_constant, 'p', ('q', 'p')), ([], QuantifiedConstant.existential_constant))
+        >>> p = Parser()
+        >>> p.parse('(10 (NOT p) ([] S))')
+        (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
+        >>> p = Parser()
+        >>> p.parse('(10 (CONTR) ([] S))')
+        (10, Op.contradiction, ([], InferenceRule.supposition))
+        """
         self._scanner = Lexer(text)
+        return self._proof()
 
-    def parse(self):
+    def _proof(self):
         self._expect_next(CommonToken.left_parenthesis)
         line = self._line()
         self._expect_next(CommonToken.right_parenthesis)
@@ -399,7 +403,7 @@ class Parser:
     def _many_proofs(self):
         many_proofs = []
         while self._peek() not in [CommonToken.right_parenthesis, None]:
-            many_proofs.append(self.parse())
+            many_proofs.append(self._proof())
         return many_proofs
 
     def _peek(self):
