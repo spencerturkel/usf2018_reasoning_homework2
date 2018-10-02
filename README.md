@@ -52,6 +52,7 @@ inference-rule = S
                | EE
                | XI
                | XE
+               | RE
 index = \d+
 symbol = [a-z0-9]+
 ```
