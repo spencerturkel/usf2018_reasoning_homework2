@@ -482,40 +482,34 @@ class ValidationException(Exception):
     pass
 
 
-def validate(entire_proof):
-    objects = set()
-    universal_constants = set()
-    existential_constants = set()
-    suppositions = set()
-    context = dict()
-    lines_in_current_subproof = set()
+def is_valid_conjunction_introduction(expr, citations):
+    """
+    Validates the introduction of a conjunction.
+    :param expr: The conjunction expression
+    :param citations: The lines cited
+    :return: the validity of the proof
 
-    def go(proof):
-        nonlocal context
-
-        if len(proof) == 2:
-            for sub_proof in proof:
-                go(sub_proof)
-            if universal_constants:
-                if existential_constants or suppositions:
-                    raise ValidationException
-                # this subproof proves an AI
-                # TODO
-            if existential_constants:
-                if universal_constants or suppositions:
-                    raise ValidationException
-                # this subproof proves an EI
-                # TODO
-            if suppositions:
-                if universal_constants or existential_constants:
-                    raise ValidationException
-                # this subproof proves some implication
-                # TODO
-            context = {k: v for k, v in context if k not in lines_in_current_subproof}
-
-        line, consequent, (antecedents, rule) = proof
-
-    go(entire_proof)
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q', 'r'), [])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), [])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), [None, None, None])
+    False
+    >>> is_valid_conjunction_introduction((Op.disjunction, 'p', 'q'), [None])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['p'])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['q'])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['p', 'q'])
+    True
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'p'), ['p'])
+    True
+    """
+    if len(expr) != 3 or not (0 < len(citations) <= 2):
+        return False
+    op, first_arg, second_arg = expr
+    return op == Op.conjunction and first_arg in citations and second_arg in citations
 
 
 # noinspection PyPep8Naming
