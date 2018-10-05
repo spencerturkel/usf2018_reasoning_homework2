@@ -78,7 +78,6 @@ formula = FORALL symbol expr
         | CONTR
         | symbol predicate-arguments
 predicate-arguments = expr predicate-arguments | ε
-
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.

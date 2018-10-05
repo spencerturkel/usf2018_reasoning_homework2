@@ -482,6 +482,17 @@ class ValidationException(Exception):
     pass
 
 
+@unique
+class SubProofKind(Enum):
+    arbitrary = 1
+    universal = 2
+    existential = 3
+    conditional = 4
+
+    def __repr__(self):
+        return 'SubProofKind.{0}'.format(self.name)
+
+
 def is_valid_conjunction_introduction(expr, citations):
     """
     Validates the introduction of a conjunction.
@@ -489,26 +500,35 @@ def is_valid_conjunction_introduction(expr, citations):
     :param citations: The lines cited
     :return: the validity of the proof
 
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q', 'r'), [])
+    >>> P, Q, R, = ('P', 'x'), ('Q', 'x'), ('R', 'x')
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q, R), [])
     False
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), [])
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [])
     False
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), [None, None, None])
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [None, None, None])
     False
-    >>> is_valid_conjunction_introduction((Op.disjunction, 'p', 'q'), [None])
+    >>> is_valid_conjunction_introduction((Op.disjunction, P, Q), [None])
     False
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['p'])
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [P])
     False
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['q'])
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [Q])
     False
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'q'), ['p', 'q'])
+    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', Q), ['p', Q])
+    False
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [P, Q])
     True
-    >>> is_valid_conjunction_introduction((Op.conjunction, 'p', 'p'), ['p'])
+    >>> is_valid_conjunction_introduction((Op.conjunction, Q, P), [P, Q])
+    True
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, Q), [Q, P])
+    True
+    >>> is_valid_conjunction_introduction((Op.conjunction, P, P), [P])
     True
     """
     if len(expr) != 3 or not (0 < len(citations) <= 2):
         return False
     op, first_arg, second_arg = expr
+    if isinstance(first_arg, str) or isinstance(second_arg, str):
+        return False
     return op == Op.conjunction and first_arg in citations and second_arg in citations
 
 
@@ -536,6 +556,93 @@ def is_valid_conjunction_elimination(expr, citations):
     return cited_expr[0] == Op.conjunction and (expr == cited_expr[1] or expr == cited_expr[2])
 
 
+def is_valid_disjunction_introduction(expr, citations):
+    """
+    Validates the introduction of a disjunction.
+    :param expr: The disjunction expression
+    :param citations: The line cited
+    :return: the validity of the proof
+
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'q', 'r'), [])
+    False
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'q'), [])
+    False
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'q'), ['p', 'q'])
+    False
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'p'), ['p', 'q'])
+    False
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'q'), ['p'])
+    True
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'q'), ['q'])
+    True
+    >>> is_valid_disjunction_introduction((Op.disjunction, 'p', 'p'), ['p'])
+    True
+    """
+    if len(expr) != 3 or len(citations) != 1:
+        return False
+    op, *args = expr
+    return op == Op.disjunction and citations[0] in args
+
+
+def is_valid_disjunction_elimination(expr, citations):
+    """
+    Validates the elimination of a disjunction.
+    :param expr: The expression from the disjunctive elimination
+    :param citations: The disjunction and conditionals cited
+    :return: the validity of the proof
+
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (Op.disjunction, 'p', 'q')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.arbitrary, 'q', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.existential, 'q', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'q', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.universal, 'q', 'r')])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'p', 'r')])
+    True
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', 'r')])
+    True
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'q', 'r')])
+    True
+    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'q', 'r'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r')])
+    True
+    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'p', 'r'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r')])
+    True
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r'), (SubProofKind.conditional, 'p', 'r')])
+    True
+    """
+    if len(citations) > 3:
+        return False
+    conditionals = []
+    disjunction = None
+    for c in citations:
+        if c[0] == Op.disjunction:
+            disjunction = c
+        else:
+            conditionals.append(c)
+    if not all(map(lambda x: x[0] == SubProofKind.conditional, conditionals)):
+        return False
+    if disjunction is None or len(disjunction) != 3 or disjunction[0] != Op.disjunction:
+        return False
+    conditions_used = 0
+    for prop in disjunction[1:]:
+        if prop not in map(lambda x: x[1], conditionals):
+            return False
+        conditions_used += 1
+    if conditions_used < len(conditionals):
+        return False
+    for consequent in map(lambda x: x[2], conditionals):
+        if expr != consequent:
+            return False
+    return True
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
@@ -545,8 +652,9 @@ def verifyProof(P):
         “I” – If P was well-formed, but not a valid proof,
         “V” – If P was well-formed, and a valid proof.
     """
-    try:
-        validate(Parser().parse(P))
-        return 'V'
-    except ValidationException or ParseError:
-        return 'I'
+    return 'I'
+    # try:
+    #     validate(Parser().parse(P))
+    #     return 'V'
+    # except ValidationException or ParseError:
+    #     return 'I'
