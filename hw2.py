@@ -104,15 +104,14 @@ class Lexer:
     StopIteration
     >>> l = Lexer('Abc')
     >>> l.peek()
+    'Abc'
     >>> next(l)
-    Traceback (most recent call last):
-        ...
-    hw2.InputSyntaxError
+    'Abc'
     """
 
     # regular expressions compiled for lexing
     _index_regex = re.compile(r'\d+')
-    _object_regex = re.compile('[a-z0-9]+')
+    _object_regex = re.compile('[A-Za-z0-9]+')
 
     def __init__(self, text):
         self.length = len(text)
@@ -373,6 +372,10 @@ class Parser:
         (10, (QuantifiedConstant.existential_constant, 'p', ('q', 'p')), ([], QuantifiedConstant.existential_constant))
         >>> p.parse('(10 (NOT p) ([] S))')
         (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
+        >>> p.parse('(10 (p x y) ([] S))')
+        (10, ('p', 'x', 'y'), ([], InferenceRule.supposition))
+        >>> p.parse('(10 (p) ([] S))')
+        (10, ('p',), ([], InferenceRule.supposition))
         >>> p.parse('(10 (CONTR) ([] S))')
         (10, Op.contradiction, ([], InferenceRule.supposition))
         """
@@ -457,10 +460,15 @@ class Parser:
             return token, self._symbol()
         if token in [Op.conjunction, Op.disjunction, Op.implication]:
             return token, self._expr(), self._expr()
-        if token == Op.negation or isinstance(token, str):
+        if token == Op.negation:
             return token, self._expr()
         if token == Op.contradiction:
             return token
+        if isinstance(token, str):
+            result = [token]
+            while self._peek() != CommonToken.right_parenthesis:
+                result.append(self._expr())
+            return tuple(result)
         raise ParseError
 
     def _symbol(self):
@@ -470,8 +478,44 @@ class Parser:
         raise ParseError
 
 
-def is_valid(proof):
+class ValidationException(Exception):
     pass
+
+
+def validate(entire_proof):
+    objects = set()
+    universal_constants = set()
+    existential_constants = set()
+    suppositions = set()
+    context = dict()
+    lines_in_current_subproof = set()
+
+    def go(proof):
+        nonlocal context
+
+        if len(proof) == 2:
+            for sub_proof in proof:
+                go(sub_proof)
+            if universal_constants:
+                if existential_constants or suppositions:
+                    raise ValidationException
+                # this subproof proves an AI
+                # TODO
+            if existential_constants:
+                if universal_constants or suppositions:
+                    raise ValidationException
+                # this subproof proves an EI
+                # TODO
+            if suppositions:
+                if universal_constants or existential_constants:
+                    raise ValidationException
+                # this subproof proves some implication
+                # TODO
+            context = {k: v for k, v in context if k not in lines_in_current_subproof}
+
+        line, consequent, (antecedents, rule) = proof
+
+    go(entire_proof)
 
 
 # noinspection PyPep8Naming
@@ -483,4 +527,8 @@ def verifyProof(P):
         “I” – If P was well-formed, but not a valid proof,
         “V” – If P was well-formed, and a valid proof.
     """
-    return 'I'
+    try:
+        validate(Parser().parse(P))
+        return 'V'
+    except ValidationException or ParseError:
+        return 'I'
