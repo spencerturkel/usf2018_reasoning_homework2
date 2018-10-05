@@ -123,8 +123,3 @@ This is the *existential constant*, which justifies:
 - and the proof of its property `P`
 
 when using an existential proposition.
-
-```
-{(ECONST x (P x))} = {x, (P x)}
-```
-A line proving `(ECONST x (P x))` may be treated as a line proving both `x` and `P x`.

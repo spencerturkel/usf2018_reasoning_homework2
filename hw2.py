@@ -512,6 +512,30 @@ def is_valid_conjunction_introduction(expr, citations):
     return op == Op.conjunction and first_arg in citations and second_arg in citations
 
 
+def is_valid_conjunction_elimination(expr, citations):
+    """
+    Validates the elimination of a conjunction.
+    :param expr: The expression from the conjunction
+    :param citations: The conjunction cited
+    :return: the validity of the proof
+
+    >>> is_valid_conjunction_elimination(('P', 'x'), [(Op.conjunction, ('P', 'x'), ('Q', 'y')), (Op.conjunction, ('P', 'x'), ('Q', 'y'))])
+    False
+    >>> is_valid_conjunction_elimination(('P', 'x'), [(Op.conjunction, ('Q', 'x'), ('Q', 'x'))])
+    False
+    >>> is_valid_conjunction_elimination(('P', 'x'), [(Op.conjunction, ('P', 'x'), ('Q', 'y'))])
+    True
+    >>> is_valid_conjunction_elimination(('P', 'x'), [(Op.conjunction, ('P', 'x'), ('P', 'x'))])
+    True
+    >>> is_valid_conjunction_elimination(('P', 'x'), [(Op.conjunction, ('Q', 'y'), ('P', 'x'))])
+    True
+    """
+    if len(citations) != 1:
+        return False
+    [cited_expr] = citations
+    return cited_expr[0] == Op.conjunction and (expr == cited_expr[1] or expr == cited_expr[2])
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
