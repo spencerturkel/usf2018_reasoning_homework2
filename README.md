@@ -76,7 +76,8 @@ formula = FORALL symbol expr
         | IMPLIES expr expr
         | NOT expr
         | CONTR
-        | object expr
+        | symbol expr
+        | symbol
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.
