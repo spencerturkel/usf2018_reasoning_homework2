@@ -797,6 +797,25 @@ def is_valid_contradiction_introduction(expr, citations):
     return first_citation == (Op.negation, second_citation) or second_citation == (Op.negation, first_citation)
 
 
+def is_valid_contradiction_elimination(expr, citations):
+    """
+    Validates the elimination of a contradiction.
+    :param expr: Any expression.
+    :param citations: The proof of a contradiction.
+    :return: Whether the elimination is valid
+
+    >>> is_valid_contradiction_elimination('a', [Op.contradiction])
+    False
+    >>> is_valid_contradiction_elimination(('a',), [Op.contradiction])
+    True
+    >>> is_valid_contradiction_elimination(('P', 'x'), [Op.contradiction])
+    True
+    >>> is_valid_contradiction_elimination(Op.contradiction, [Op.contradiction])
+    True
+    """
+    return len(citations) == 1 and citations[0] == Op.contradiction and not isinstance(expr, str)
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
