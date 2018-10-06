@@ -816,6 +816,66 @@ def is_valid_contradiction_elimination(expr, citations):
     return len(citations) == 1 and citations[0] == Op.contradiction and not isinstance(expr, str)
 
 
+def is_valid_universal_introduction(expr, citations):
+    """
+    Validates the introduction of a universal proof.
+    :param expr: The universal proof
+    :param citations: The sub-proof proving the universal statement
+    :return: Whether the introduction is valid
+
+    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', [])])
+    False
+    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', ['q'])])
+    False
+    >>> is_valid_universal_introduction((Op.implication, 'x', 'p'), [(SubProofKind.universal, 'x', ['p'])])
+    False
+    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.conditional, 'x', ['p'])])
+    False
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('P', 'x')), [(SubProofKind.universal, 'y', [('P', 'xy')])])
+    False
+    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', ['p'])])
+    True
+    >>> is_valid_universal_introduction((Op.universal, 'x', 'q'), [(SubProofKind.universal, 'x', ['p', 'q'])])
+    True
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('x',)), [(SubProofKind.universal, 'y', [('y',)])])
+    True
+    """
+    if len(expr) != 3 or len(citations) != 1:
+        return False
+    [sub_proof] = citations
+    if len(sub_proof) != 3:
+        return False
+    kind, sub_proof_variable, consequents = sub_proof
+    if kind != SubProofKind.universal:
+        return False
+    op, expr_variable, predicate = expr
+    if op != Op.universal:
+        return False
+    # TODO
+
+def is_valid_universal_elimination(expr, citations):
+    """
+    Validates a universal elimination.
+    :param expr: The result of the elimination
+    :param citations: The universal statement
+    :return: Whether the elimination was valid
+
+    >>> is_valid_universal_elimination(('x',), [(Op.universal, 'y', 'x')])
+    False
+    >>> is_valid_universal_elimination(('P', 'y'), [(Op.universal, 'y', ('P', 'x'))])
+    False
+    >>> is_valid_universal_elimination(('Q', 'x'), [(Op.universal, 'y', ('P', 'y'))])
+    False
+    >>> is_valid_universal_elimination(('x',), [(Op.universal, 'y', ('x',))])
+    True
+    >>> is_valid_universal_elimination(('P', 'y'), [(Op.universal, 'y', ('P', 'y'))])
+    True
+    >>> is_valid_universal_elimination(('P', 'x'), [(Op.universal, 'y', ('P', 'y'))])
+    True
+    """
+    # TODO
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
