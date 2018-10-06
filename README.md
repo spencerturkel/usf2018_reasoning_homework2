@@ -95,12 +95,12 @@ II |- {{p} => q} -> (IMPLIES p q)
 IE |- {(IMPLIES p q), p} -> q
 NI |- {{p} => (CONTR)} -> (NOT p)
 NE |- {(NOT (NOT p))} -> p
+XI |- {p, (NOT p)} -> (CONTR)
+XE |- {(CONTR)} -> p
 AI |- {{x} => P x} -> (FORALL y (P y))
 AE |- {(FORALL x (P x)), y} -> P y
 EI |- {P x} -> (EXISTS y (P y))
 EE |- {(EXISTS x (P x)), {y, P y} => q} -> q
-XI |- {p, (NOT p)} -> (CONTR)
-XE |- {(CONTR)} -> p
 ```
 
 ## Informal Rules

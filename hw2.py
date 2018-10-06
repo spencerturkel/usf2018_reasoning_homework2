@@ -708,6 +708,38 @@ def is_valid_implication_elimination(expr, citations):
             antecedent = cited_proof
     return cited_antecedent and cited_consequent and antecedent and antecedent == cited_antecedent and expr == cited_consequent
 
+def is_valid_negation_introduction(expr, citations):
+    """
+    Validates the introduction of a negation.
+    :param expr: The negation
+    :param citations: The proof of the contradiction arising from an assumption
+    :return: Whether the introduction is valid
+
+    >>> is_valid_negation_introduction((Op.negation, 'p'), [(SubProofKind.conditional, 'p', [])])
+    False
+    >>> is_valid_negation_introduction((Op.negation, 'p'), [(SubProofKind.conditional, 'p', [Op.negation])])
+    False
+    >>> is_valid_negation_introduction('p', [(SubProofKind.conditional, (Op.negation, 'p'), [Op.contradiction])])
+    False
+    >>> is_valid_negation_introduction((Op.negation, 'p'), [(SubProofKind.universal, 'p', [Op.contradiction])])
+    False
+    >>> is_valid_negation_introduction((Op.negation, 'p'), [(SubProofKind.conditional, 'p', [Op.contradiction])])
+    True
+    >>> is_valid_negation_introduction((Op.negation, 'p'), [(SubProofKind.conditional, 'p', [Op.contradiction, 'q'])])
+    True
+    """
+    if len(expr) != 2:
+        return False
+    op, negated = expr
+    if op != Op.negation:
+        return False
+    if len(citations) != 1:
+        return False
+    [subproof] = citations
+    if len(subproof) != 3:
+        return False
+    kind, antecedent, consequents = subproof
+    return kind == SubProofKind.conditional and antecedent == negated and Op.contradiction in consequents
 
 # noinspection PyPep8Naming
 def verifyProof(P):
