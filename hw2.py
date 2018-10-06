@@ -853,6 +853,7 @@ def is_valid_universal_introduction(expr, citations):
         return False
     # TODO
 
+
 def is_valid_universal_elimination(expr, citations):
     """
     Validates a universal elimination.
@@ -874,6 +875,67 @@ def is_valid_universal_elimination(expr, citations):
     True
     """
     # TODO
+
+
+def is_valid_existential_introduction(proof, citations):
+    """
+    Validates an existential introduction.
+    :param proof: The existential claim.
+    :param citations: The specific claim being generalized.
+    :return: Whether the introduction is valid
+
+    >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'x')), [('P', 'x')])
+    False
+    >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'y', 'x')), [('P', 'z', 'y')])
+    False
+    >>> is_valid_existential_introduction((Op.universal, 'x', ('P', 'x')), [('P', 'y')])
+    False
+    >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'x')), [])
+    False
+    >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'x')), [('P', 'y')])
+    True
+    >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'x', 'y')), [('P', 'z', 'y')])
+    True
+    """
+    # TODO
+
+
+def is_valid_existential_elimination(proof, citations):
+    """
+    Validates an existential elimination.
+    :param proof: The result of the sub-proof.
+    :param citations: The sub-proof proving the result.
+    :return: Whether the elimination is valid
+
+    >>> is_valid_existential_elimination(('p', 'x'), [(SubProofKind.existential, 'x', [('p', 'x'), ('p', 'y')])])
+    False
+    >>> is_valid_existential_elimination(('p',), [(SubProofKind.universal, 'x', [('p',)])])
+    False
+    >>> is_valid_existential_elimination(('p',), [(SubProofKind.existential, 'x', [('p',)])])
+    True
+    >>> is_valid_existential_elimination(('p', 'y'), [(SubProofKind.existential, 'x', [('p', 'x'), ('p', 'y')])])
+    True
+    """
+    # TODO
+
+
+def is_valid_reiteration(proof, citations):
+    """
+    Validates a reiteration.
+    :param proof: The reiterated proof.
+    :param citations: The original proof.
+    :return: Whether the reiteration is valid
+
+    >>> is_valid_reiteration('x', ['y'])
+    False
+    >>> is_valid_reiteration('x', [])
+    False
+    >>> is_valid_reiteration('x', ['x'])
+    True
+    >>> is_valid_reiteration('x', ['x', 'y'])
+    True
+    """
+    return proof in citations
 
 
 # noinspection PyPep8Naming
