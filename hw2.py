@@ -708,6 +708,7 @@ def is_valid_implication_elimination(expr, citations):
             antecedent = cited_proof
     return cited_antecedent and cited_consequent and antecedent and antecedent == cited_antecedent and expr == cited_consequent
 
+
 def is_valid_negation_introduction(expr, citations):
     """
     Validates the introduction of a negation.
@@ -740,6 +741,37 @@ def is_valid_negation_introduction(expr, citations):
         return False
     kind, antecedent, consequents = subproof
     return kind == SubProofKind.conditional and antecedent == negated and Op.contradiction in consequents
+
+
+def is_valid_negation_elimination(expr, citations):
+    """
+    Validates the elimination of a negation.
+    :param expr: The expression under the double negation.
+    :param citations: The double negation.
+    :return: Whether the elimination is valid.
+
+    >>> is_valid_negation_elimination('p', [(Op.negation, 'p')])
+    False
+    >>> is_valid_negation_elimination('q', [(Op.negation, (Op.negation, 'p'))])
+    False
+    >>> is_valid_negation_elimination('p', ['q', (Op.negation, (Op.negation, 'p'))])
+    False
+    >>> is_valid_negation_elimination('p', [(Op.negation, (Op.negation, 'p'))])
+    True
+    >>> is_valid_negation_elimination((Op.negation, 'p'), [(Op.negation, (Op.negation, (Op.negation, 'p')))])
+    True
+    """
+    if len(citations) != 1:
+        return False
+    [double_negation] = citations
+    if len(double_negation) != 2:
+        return False
+    first_op, first_negated = double_negation
+    if first_op != Op.negation or len(first_negated) != 2:
+        return False
+    second_op, doubly_negated_expr = first_negated
+    return second_op == Op.negation and doubly_negated_expr == expr
+
 
 # noinspection PyPep8Naming
 def verifyProof(P):
