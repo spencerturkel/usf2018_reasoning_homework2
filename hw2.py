@@ -773,6 +773,30 @@ def is_valid_negation_elimination(expr, citations):
     return second_op == Op.negation and doubly_negated_expr == expr
 
 
+def is_valid_contradiction_introduction(expr, citations):
+    """
+    Validates the introduction of a contradiction.
+    :param expr: The contradiction.
+    :param citations: The proofs that contradict each other.
+    :return: Whether the introduction is valid
+
+    >>> is_valid_contradiction_introduction(Op.contradiction, ['a', (Op.negation, 'b')])
+    False
+    >>> is_valid_contradiction_introduction(Op.contradiction, ['b', (Op.negation, 'a')])
+    False
+    >>> is_valid_contradiction_introduction(Op.contradiction, ['a', (Op.contradiction, 'a')])
+    False
+    >>> is_valid_contradiction_introduction(Op.contradiction, ['a', (Op.negation, 'a')])
+    True
+    >>> is_valid_contradiction_introduction(Op.contradiction, [(Op.negation, 'a'), (Op.negation, (Op.negation, 'a'))])
+    True
+    """
+    if expr != Op.contradiction or len(citations) != 2:
+        return False
+    [first_citation, second_citation] = citations
+    return first_citation == (Op.negation, second_citation) or second_citation == (Op.negation, first_citation)
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
