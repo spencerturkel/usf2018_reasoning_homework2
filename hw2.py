@@ -681,6 +681,34 @@ def is_valid_implication_introduction(expr, citations):
     return expr_op == Op.implication and expr_antecedent == cited_antecedent and expr_consequent in cited_consequents
 
 
+def is_valid_implication_elimination(expr, citations):
+    """
+    Validates the elimination of an implication.
+    :param expr: The consequent
+    :param citations: The proof of the antecedent
+    :return: Whether the elimination is valid
+
+    >>> is_valid_implication_elimination('q', [(Op.implication, 'p', 'q'), 'q'])
+    False
+    >>> is_valid_implication_elimination('q', [(Op.conjunction, 'p', 'q'), 'p'])
+    False
+    >>> is_valid_implication_elimination('p', [(Op.implication, 'p', 'q'), 'p'])
+    False
+    >>> is_valid_implication_elimination('q', [(Op.implication, 'p', 'q'), 'p'])
+    True
+    """
+    cited_antecedent = False
+    cited_consequent = False
+    antecedent = False
+    for cited_proof in citations:
+        tag, *rest = cited_proof
+        if tag == Op.implication:
+            cited_antecedent, cited_consequent = rest
+        else:
+            antecedent = cited_proof
+    return cited_antecedent and cited_consequent and antecedent and antecedent == cited_antecedent and expr == cited_consequent
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
