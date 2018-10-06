@@ -593,29 +593,33 @@ def is_valid_disjunction_elimination(expr, citations):
 
     >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (Op.disjunction, 'p', 'q')])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.arbitrary, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.arbitrary, 'q', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.existential, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.existential, 'q', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.conditional, 'q', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.universal, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.universal, 'q', ['r'])])
     False
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'p', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', [])])
+    False
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.conditional, 'q', ['r'])])
     True
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', ['r']), (SubProofKind.conditional, 'p', ['r'])])
     True
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r'), (SubProofKind.conditional, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', ['r'])])
     True
-    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'q', 'r'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'p'), (SubProofKind.conditional, 'p', ['s', 'r'])])
     True
-    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'p', 'r'), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'q', ['r']), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'p', ['r'])])
     True
-    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', 'r'), (SubProofKind.conditional, 'p', 'r')])
+    >>> is_valid_disjunction_elimination('r', [(SubProofKind.conditional, 'p', ['r']), (Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', ['r'])])
+    True
+    >>> is_valid_disjunction_elimination('r', [(Op.disjunction, 'p', 'q'), (SubProofKind.conditional, 'q', ['r']), (SubProofKind.conditional, 'p', ['r'])])
     True
     """
     if len(citations) > 3:
@@ -623,12 +627,13 @@ def is_valid_disjunction_elimination(expr, citations):
     conditionals = []
     disjunction = None
     for c in citations:
-        if c[0] == Op.disjunction:
+        tag = c[0]
+        if tag == Op.disjunction:
             disjunction = c
-        else:
+        elif tag == SubProofKind.conditional:
             conditionals.append(c)
-    if not all(map(lambda x: x[0] == SubProofKind.conditional, conditionals)):
-        return False
+        else:
+            return False
     if disjunction is None or len(disjunction) != 3 or disjunction[0] != Op.disjunction:
         return False
     conditions_used = 0
@@ -638,10 +643,43 @@ def is_valid_disjunction_elimination(expr, citations):
         conditions_used += 1
     if conditions_used < len(conditionals):
         return False
-    for consequent in map(lambda x: x[2], conditionals):
-        if expr != consequent:
-            return False
-    return True
+    return all(map(lambda x: expr in x[2], conditionals))
+
+
+def is_valid_implication_introduction(expr, citations):
+    """
+    Validates the introduction of an implication.
+    :param expr: The implication introduced
+    :param citations: The cited sub-proof
+    :return: Whether the introduction is valid
+
+    >>> is_valid_implication_introduction((Op.conjunction, 'p', 'q'), [(SubProofKind.conditional, 'p', ['q'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'r', 'q'), [(SubProofKind.conditional, 'p', ['q'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'q', ['q'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'q', ['p'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'p', ['p'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.universal, 'p', ['q'])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'p', [])])
+    False
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'p', ['q'])])
+    True
+    >>> is_valid_implication_introduction((Op.implication, 'p', 'q'), [(SubProofKind.conditional, 'p', ['q', 'r'])])
+    True
+    """
+    if len(expr) != 3 or len(citations) != 1:
+        return False
+    [(sub_proof_kind, cited_antecedent, cited_consequents)] = citations
+    if sub_proof_kind != SubProofKind.conditional:
+        return False
+    expr_op, expr_antecedent, expr_consequent = expr
+    return expr_op == Op.implication and expr_antecedent == cited_antecedent and expr_consequent in cited_consequents
+
 
 # noinspection PyPep8Naming
 def verifyProof(P):
