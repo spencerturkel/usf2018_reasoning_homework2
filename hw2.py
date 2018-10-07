@@ -989,8 +989,6 @@ def is_valid_universal_elimination(expr, citations):
     :param citations: The universal statement
     :return: Whether the elimination was valid
 
-    >>> is_valid_universal_elimination(('x',), [(Op.universal, 'y', 'x')])
-    False
     >>> is_valid_universal_elimination(('P', 'y'), [(Op.universal, 'y', ('P', 'x'))])
     False
     >>> is_valid_universal_elimination(('Q', 'x'), [(Op.universal, 'y', ('P', 'y'))])
@@ -1002,7 +1000,15 @@ def is_valid_universal_elimination(expr, citations):
     >>> is_valid_universal_elimination(('P', 'x'), [(Op.universal, 'y', ('P', 'y'))])
     True
     """
-    # TODO
+    if len(citations) != 1 or isinstance(expr, str):
+        return False
+    [citation] = citations
+    if len(citation) != 3:
+        return False
+    op, constant, predicate = citation
+    if op != Op.universal:
+        return False
+    return any(substitute(sym, constant, predicate) == expr for sym in expr_symbols(expr))
 
 
 def is_valid_existential_introduction(proof, citations):
