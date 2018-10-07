@@ -876,8 +876,67 @@ def expr_symbols(expr):
     return result
 
 
-def substitute(sym, var, prop):
-    pass
+def substitute(sym, var, expr):
+    """
+    Performs capture-avoiding substitution in an expression.
+    :param sym: the symbol to substitute in
+    :param var: the variable to replace
+    :param expr: the expression to be substituted
+    :return: a new expression with the substitution
+
+    >>> substitute('a', 'x', ('P', 'a'))
+    ('P', 'a')
+    >>> substitute('a', 'x', ('P', 'x', 'x'))
+    ('P', 'a', 'a')
+    >>> substitute('a', 'x', (Op.universal, 'y', ('P', 'x')))
+    (Op.universal, 'y', ('P', 'a'))
+    >>> substitute('a', 'x', (Op.universal, 'x', ('P', 'x')))
+    (Op.universal, 'x', ('P', 'x'))
+    >>> substitute('x', 'y', (Op.universal, 'x', ('P', 'x', 'y')))
+    (Op.universal, 'Pxy', ('P', 'Pxy', 'x'))
+    >>> substitute('a', 'x', (Op.existence, 'y', ('P', 'x')))
+    (Op.existence, 'y', ('P', 'a'))
+    >>> substitute('a', 'x', (Op.existence, 'x', ('P', 'x')))
+    (Op.existence, 'x', ('P', 'x'))
+    >>> substitute('x', 'y', (Op.existence, 'x', ('P', 'x', 'y')))
+    (Op.existence, 'Pxy', ('P', 'Pxy', 'x'))
+    >>> substitute('a', 'x', (Op.conjunction, ('P', 'x'), ('Q', 'y')))
+    (Op.conjunction, ('P', 'a'), ('Q', 'y'))
+    >>> substitute('a', 'x', (Op.disjunction, ('P', 'x'), ('Q', 'y')))
+    (Op.disjunction, ('P', 'a'), ('Q', 'y'))
+    >>> substitute('a', 'x', (Op.implication, ('P', 'x'), ('Q', 'y')))
+    (Op.implication, ('P', 'a'), ('Q', 'y'))
+    >>> substitute('a', 'x', (Op.negation, ('P', 'x')))
+    (Op.negation, ('P', 'a'))
+    >>> substitute('a', 'x', Op.contradiction)
+    Op.contradiction
+    """
+    if expr == Op.contradiction:
+        return expr
+    tag = expr[0]
+    if isinstance(tag, str):
+        result = [tag]
+        for obj in expr[1:]:
+            result.append(sym if obj == var else obj)
+        return tuple(result)
+    if tag in [Op.conjunction, Op.disjunction, Op.implication]:
+        return tag, substitute(sym, var, expr[1]), substitute(sym, var, expr[2])
+    if tag == Op.negation:
+        return tag, substitute(sym, var, expr[1])
+    if tag in [Op.universal, Op.existence]:
+        _, constant, consequent = expr
+
+        if var == constant:
+            return expr
+
+        if sym == constant:
+            fresh_constant = ''.join(sorted(expr_symbols(sym) | expr_symbols(consequent)))
+            consequent = substitute(fresh_constant, constant, consequent)
+            constant = fresh_constant
+
+        return tag, constant, substitute(sym, var, consequent)
+
+    raise ValidationException('Unknown tag {0}'.format(tag))
 
 
 def is_valid_universal_introduction(expr, citations):
