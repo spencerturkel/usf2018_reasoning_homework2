@@ -816,6 +816,70 @@ def is_valid_contradiction_elimination(expr, citations):
     return len(citations) == 1 and citations[0] == Op.contradiction and not isinstance(expr, str)
 
 
+def expr_symbols(expr):
+    """
+    Computes the set of symbols in an expression.
+    :param expr: the expression to scan
+    :return: the set of all symbols present in the expression.
+
+    >>> expr_symbols('x') == {'x'}
+    True
+    >>> expr_symbols(('x',)) == {'x'}
+    True
+    >>> expr_symbols(('P', 'x')) == {'P', 'x'}
+    True
+    >>> expr_symbols((Op.universal, 'x', ('P',))) == {'P', 'x'}
+    True
+    >>> expr_symbols((Op.existence, 'x', ('P',))) == {'P', 'x'}
+    True
+    >>> expr_symbols((QuantifiedConstant.universal_constant, 'x')) == {'x'}
+    True
+    >>> expr_symbols((QuantifiedConstant.existential_constant, 'x', ('P',))) == {'P', 'x'}
+    True
+    >>> expr_symbols((Op.conjunction, ('P',), ('Q',))) == {'P', 'Q'}
+    True
+    >>> expr_symbols((Op.disjunction, ('P',), ('Q',))) == {'P', 'Q'}
+    True
+    >>> expr_symbols((Op.implication, ('P',), ('Q',))) == {'P', 'Q'}
+    True
+    >>> expr_symbols((Op.negation, ('P',))) == {'P'}
+    True
+    >>> expr_symbols(Op.contradiction) == set()
+    True
+    """
+
+    result = set()
+
+    def go(sub_expr):
+        nonlocal result
+        if isinstance(sub_expr, str):
+            result.add(sub_expr)
+        if sub_expr == Op.contradiction:
+            return
+        tag = sub_expr[0]
+        if tag in [Op.universal, Op.existence, QuantifiedConstant.existential_constant]:
+            result.add(sub_expr[1])
+            go(sub_expr[2])
+        if tag == QuantifiedConstant.universal_constant:
+            result.add(sub_expr[1])
+        if tag == Op.negation:
+            go(sub_expr[1])
+        if tag in [Op.conjunction, Op.disjunction, Op.implication]:
+            go(sub_expr[1])
+            go(sub_expr[2])
+        if isinstance(tag, str):
+            result.add(tag)
+            for e in sub_expr[1:]:
+                go(e)
+
+    go(expr)
+    return result
+
+
+def substitute(sym, var, prop):
+    pass
+
+
 def is_valid_universal_introduction(expr, citations):
     """
     Validates the introduction of a universal proof.
@@ -936,14 +1000,6 @@ def is_valid_reiteration(proof, citations):
     True
     """
     return proof in citations
-
-
-def expr_symbols(expr):
-    return set()
-
-
-def substitute(sym, var, prop):
-    pass
 
 
 def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols):
