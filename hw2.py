@@ -351,7 +351,7 @@ class Parser:
                           Tuple[Op.implication,  Expr,  Expr],
                           Tuple[Op.negation,  Expr],
                           Op.contradiction,
-                          Tuple[str,  Expr],
+                          Tuple[str, Expr*],
                         ]
             Justification = List[int] * InferenceRule
 
@@ -936,6 +936,85 @@ def is_valid_reiteration(proof, citations):
     True
     """
     return proof in citations
+
+
+def expr_symbols(expr):
+    return set()
+
+
+def substitute(sym, var, prop):
+    pass
+
+
+def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols):
+    if line_number in context:
+        return None
+
+    if rule == InferenceRule.supposition:
+        if len(cited_line_numbers) == 0 or isinstance(expr, str) or expr in context.values():
+            return None
+        return expr_symbols(expr) | symbols
+
+    if rule == QuantifiedConstant.universal_constant:
+        if len(cited_line_numbers) != 0 or len(expr) != 2:
+            return None
+        quantifier, sym = expr
+        if quantifier != QuantifiedConstant.universal_constant or sym in symbols:
+            return None
+        return {sym} | symbols
+
+    if rule == QuantifiedConstant.existential_constant:
+        if len(cited_line_numbers) != 1 or len(expr) != 3 or cited_line_numbers[0] not in context:
+            return None
+        quantifier, sym, prop = expr
+        if quantifier != QuantifiedConstant.existential_constant:
+            return None
+        citation = context[cited_line_numbers[0]]
+        if len(citation) != 3 or citation[0] != QuantifiedConstant.existential_constant:
+            return None
+        _, var, ex_prop = citation
+        if not substitute(sym, var, ex_prop) == prop:
+            return None
+        return {var} | symbols, {prop} | context
+
+    citations = []
+    for cited_index in cited_line_numbers:
+        if cited_index not in context:
+            return False
+        citations.append(context[cited_index])
+
+    if rule == InferenceRule.conjunction_introduction:
+        return is_valid_conjunction_introduction(expr, citations)
+    if rule == InferenceRule.conjunction_elimination:
+        return is_valid_conjunction_elimination(expr, citations)
+    if rule == InferenceRule.disjunction_introduction:
+        return is_valid_disjunction_introduction(expr, citations)
+    if rule == InferenceRule.disjunction_elimination:
+        return is_valid_disjunction_elimination(expr, citations)
+    if rule == InferenceRule.implication_introduction:
+        return is_valid_implication_introduction(expr, citations)
+    if rule == InferenceRule.implication_elimination:
+        return is_valid_implication_elimination(expr, citations)
+    if rule == InferenceRule.negation_introduction:
+        return is_valid_negation_introduction(expr, citations)
+    if rule == InferenceRule.negation_elimination:
+        return is_valid_negation_elimination(expr, citations)
+    if rule == InferenceRule.universal_introduction:
+        return is_valid_universal_introduction(expr, citations)
+    if rule == InferenceRule.universal_elimination:
+        return is_valid_universal_elimination(expr, citations)
+    if rule == InferenceRule.existential_introduction:
+        return is_valid_existential_introduction(expr, citations)
+    if rule == InferenceRule.existential_elimination:
+        return is_valid_existential_elimination(expr, citations)
+    if rule == InferenceRule.contradiction_introduction:
+        return is_valid_contradiction_introduction(expr, citations)
+    if rule == InferenceRule.contradiction_elimination:
+        return is_valid_contradiction_elimination(expr, citations)
+    if rule == InferenceRule.reiteration:
+        return is_valid_reiteration(expr, citations)
+
+    raise ValidationException('Unknown rule {0}'.format(rule))
 
 
 # noinspection PyPep8Naming
