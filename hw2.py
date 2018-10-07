@@ -948,34 +948,34 @@ def substitute(sym, var, prop):
 
 def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols):
     if line_number in context:
-        return None
+        return False
 
     if rule == InferenceRule.supposition:
         if len(cited_line_numbers) == 0 or isinstance(expr, str) or expr in context.values():
-            return None
-        return expr_symbols(expr) | symbols
+            return False
+        return True
 
     if rule == QuantifiedConstant.universal_constant:
         if len(cited_line_numbers) != 0 or len(expr) != 2:
-            return None
+            return False
         quantifier, sym = expr
         if quantifier != QuantifiedConstant.universal_constant or sym in symbols:
-            return None
-        return {sym} | symbols
+            return False
+        return True
 
     if rule == QuantifiedConstant.existential_constant:
         if len(cited_line_numbers) != 1 or len(expr) != 3 or cited_line_numbers[0] not in context:
-            return None
+            return False
         quantifier, sym, prop = expr
         if quantifier != QuantifiedConstant.existential_constant:
-            return None
+            return False
         citation = context[cited_line_numbers[0]]
         if len(citation) != 3 or citation[0] != QuantifiedConstant.existential_constant:
-            return None
+            return False
         _, var, ex_prop = citation
         if not substitute(sym, var, ex_prop) == prop:
-            return None
-        return {var} | symbols, {prop} | context
+            return False
+        return True
 
     citations = []
     for cited_index in cited_line_numbers:
@@ -1017,6 +1017,55 @@ def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols)
     raise ValidationException('Unknown rule {0}'.format(rule))
 
 
+def validate_proof(proof, context, symbols):
+    if len(proof) == 3:
+        line_number, expr, (cited_line_numbers, rule) = proof
+        if not is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols):
+            return None
+        if rule == InferenceRule.supposition:
+            context = context.copy()
+            context[line_number] = expr
+            return context, symbols | expr_symbols(expr)
+        if rule == QuantifiedConstant.universal_constant:
+            return context, symbols | expr[1]
+        if rule == QuantifiedConstant.existential_constant:
+            context = context.copy()
+            context[line_number] = expr[2]
+            return context, symbols | expr[1]
+        return context, symbols
+
+    proof_line_number, sub_proof_list = proof
+
+    if proof_line_number in context:
+        return None
+
+    sub_proof_kind = SubProofKind.arbitrary
+
+    inner_context = context
+    inner_symbols = symbols
+    for sub_proof in sub_proof_list:
+        inner_context, inner_symbols = validate_proof(sub_proof, inner_context, inner_symbols)
+        if len(sub_proof) == 3:
+            _, _, (_, rule) = sub_proof
+            if rule == InferenceRule.supposition:
+                if sub_proof_kind != SubProofKind.arbitrary:
+                    return None
+                sub_proof_kind = SubProofKind.conditional
+            if rule == QuantifiedConstant.universal_constant:
+                if sub_proof_kind != SubProofKind.arbitrary:
+                    return None
+                sub_proof_kind = SubProofKind.universal
+            if rule == QuantifiedConstant.existential_constant:
+                if sub_proof_kind != SubProofKind.arbitrary:
+                    return None
+                sub_proof_kind = SubProofKind.existential
+
+    consequents = [prop for line_number, prop in inner_context if line_number not in context]
+    context = context.copy()
+    context[proof_line_number] = (sub_proof_kind, consequents)
+    return context, symbols
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
@@ -1026,9 +1075,10 @@ def verifyProof(P):
         “I” – If P was well-formed, but not a valid proof,
         “V” – If P was well-formed, and a valid proof.
     """
-    return 'I'
-    # try:
-    #     validate(Parser().parse(P))
-    #     return 'V'
-    # except ValidationException or ParseError:
-    #     return 'I'
+    # noinspection PyBroadException
+    try:
+        context, _ = validate_proof(Parser().parse(P), dict(), set())
+        [sub_proof_kind] = context.keys()
+        return 'V' if sub_proof_kind == SubProofKind.conditional else 'I'
+    except Exception:
+        return 'I'
