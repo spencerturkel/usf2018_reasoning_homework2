@@ -1008,7 +1008,7 @@ def is_valid_universal_elimination(expr, citations):
     op, constant, predicate = citation
     if op != Op.universal:
         return False
-    return any(substitute(sym, constant, predicate) == expr for sym in expr_symbols(expr))
+    return expr in (substitute(sym, constant, predicate) for sym in expr_symbols(expr))
 
 
 def is_valid_existential_introduction(proof, citations):
@@ -1031,7 +1031,14 @@ def is_valid_existential_introduction(proof, citations):
     >>> is_valid_existential_introduction((Op.existence, 'x', ('P', 'x', 'y')), [('P', 'z', 'y')])
     True
     """
-    # TODO
+    if len(citations) != 1 or len(proof) != 3:
+        return False
+    op, constant, predicate = proof
+    if op != Op.existence:
+        return False
+    [expr] = citations
+    return constant not in expr_symbols(expr) and predicate in (substitute(constant, var, expr) for var in
+                                                                expr_symbols(expr))
 
 
 def is_valid_existential_elimination(proof, citations):
