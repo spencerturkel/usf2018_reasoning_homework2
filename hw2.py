@@ -946,21 +946,23 @@ def is_valid_universal_introduction(expr, citations):
     :param citations: The sub-proof proving the universal statement
     :return: Whether the introduction is valid
 
-    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', [])])
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('p',)), [(SubProofKind.universal, 'x', [])])
     False
-    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', ['q'])])
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('p',)), [(SubProofKind.universal, 'x', [('q',)])])
     False
-    >>> is_valid_universal_introduction((Op.implication, 'x', 'p'), [(SubProofKind.universal, 'x', ['p'])])
+    >>> is_valid_universal_introduction((Op.implication, 'x', ('p',)), [(SubProofKind.universal, 'x', [('p',)])])
     False
-    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.conditional, 'x', ['p'])])
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('p',)), [(SubProofKind.conditional, 'x', [('p',)])])
     False
     >>> is_valid_universal_introduction((Op.universal, 'x', ('P', 'x')), [(SubProofKind.universal, 'y', [('P', 'xy')])])
     False
-    >>> is_valid_universal_introduction((Op.universal, 'x', 'p'), [(SubProofKind.universal, 'x', ['p'])])
+    >>> is_valid_universal_introduction((Op.universal, ('P', 'x'), ('p',)), [(SubProofKind.universal, 'x', [('p',)])])
+    False
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('p',)), [(SubProofKind.universal, 'x', [('p',)])])
     True
-    >>> is_valid_universal_introduction((Op.universal, 'x', 'q'), [(SubProofKind.universal, 'x', ['p', 'q'])])
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('q',)), [(SubProofKind.universal, 'x', [('p',), ('q',)])])
     True
-    >>> is_valid_universal_introduction((Op.universal, 'x', ('x',)), [(SubProofKind.universal, 'y', [('y',)])])
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('P', 'x')), [(SubProofKind.universal, 'y', [('P', 'y')])])
     True
     """
     if len(expr) != 3 or len(citations) != 1:
@@ -971,10 +973,10 @@ def is_valid_universal_introduction(expr, citations):
     kind, sub_proof_variable, consequents = sub_proof
     if kind != SubProofKind.universal:
         return False
-    op, expr_variable, predicate = expr
-    if op != Op.universal:
+    op, constant, predicate = expr
+    if op != Op.universal or not isinstance(constant, str):
         return False
-    # TODO
+    return predicate in map(lambda e: substitute(constant, sub_proof_variable, e), consequents)
 
 
 def is_valid_universal_elimination(expr, citations):
