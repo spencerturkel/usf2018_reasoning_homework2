@@ -958,6 +958,8 @@ def is_valid_universal_introduction(expr, citations):
     False
     >>> is_valid_universal_introduction((Op.universal, ('P', 'x'), ('p',)), [(SubProofKind.universal, 'x', [('p',)])])
     False
+    >>> is_valid_universal_introduction((Op.universal, 'x', ('P', 'x')), [(SubProofKind.universal, 'y', [('P', 'x')])])
+    False
     >>> is_valid_universal_introduction((Op.universal, 'x', ('p',)), [(SubProofKind.universal, 'x', [('p',)])])
     True
     >>> is_valid_universal_introduction((Op.universal, 'x', ('q',)), [(SubProofKind.universal, 'x', [('p',), ('q',)])])
@@ -976,7 +978,8 @@ def is_valid_universal_introduction(expr, citations):
     op, constant, predicate = expr
     if op != Op.universal or not isinstance(constant, str):
         return False
-    return predicate in map(lambda e: substitute(constant, sub_proof_variable, e), consequents)
+    return predicate in map(lambda e: substitute(constant, sub_proof_variable, e),
+                            filter(lambda e: constant not in expr_symbols(e), consequents))
 
 
 def is_valid_universal_elimination(expr, citations):
