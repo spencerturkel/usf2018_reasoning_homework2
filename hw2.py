@@ -1057,7 +1057,13 @@ def is_valid_existential_elimination(proof, citations):
     >>> is_valid_existential_elimination(('p', 'y'), [(SubProofKind.existential, 'x', [('p', 'x'), ('p', 'y')])])
     True
     """
-    # TODO
+    if len(citations) != 1:
+        return False
+    [sub_proof] = citations
+    if len(sub_proof) != 3:
+        return False
+    kind, constant, predicates = sub_proof
+    return kind == SubProofKind.existential and proof in predicates and constant not in expr_symbols(proof)
 
 
 def is_valid_reiteration(proof, citations):
