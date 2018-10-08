@@ -135,6 +135,18 @@ def parse(lexer):
 
     :param lexer: an iterator of lexemes allowing a .peek() operation for lookahead
     :return: a Proof.
+    Proof = Union[Tuple[int, List[Proof]],
+                  Tuple[int, Predicate, List[int], str],
+                  Tuple[int, str],
+                  Tuple[int, str, str, int]]
+    Predicate = Union[Tuple['FORALL', str, Predicate],
+                      Tuple['EXISTS', str, Predicate],
+                      Tuple['AND', Predicate, Predicate],
+                      Tuple['OR', Predicate, Predicate],
+                      Tuple['IMPLIES', Predicate, Predicate],
+                      Tuple['NOT', Predicate],
+                      'CONTR',
+                      Tuple[str, List[Predicate]],
     :except ParseError: when the proof cannot be parsed.
     """
 

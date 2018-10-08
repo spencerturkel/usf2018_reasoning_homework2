@@ -72,15 +72,16 @@ universal-constant = ( UCONST symbol ) ( [ ] UCONST )
 existential-constant = ( ECONST symbol predicate ) ( [ index ] ECONST )
 expr = FORALL symbol predicate
      | EXISTS symbol predicate
-     | AND predicate predicate
-     | OR predicate predicate
-     | IMPLIES predicate predicate
-     | NOT predicate
+     | AND argument argument
+     | OR argument argument
+     | IMPLIES argument argument
+     | NOT argument
      | CONTR
-     | symbol predicate-arguments
+     | symbol many-arguments
 indices = index trailing-indices | ε
-predicate-arguments = , symbol predicate-arguments | ε
+many-arguments = argument many-arguments | ε
 trailing-indices = , index trailing-indices | ε
+argument = symbol | predicate
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.
