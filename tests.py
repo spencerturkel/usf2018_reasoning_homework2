@@ -5,12 +5,28 @@ import pytest
 
 class TestLexer:
     @pytest.mark.parametrize(['string', 'result'], [
+        ('UCONST ECONST', set(QuantifiedConstant)),
+        ('FORALL EXISTS CONTR AND OR IMPLIES NOT', set(Op)),
+        ('S CI CE DI DE II IE NI NE AI AE EI EE XI XE RE', set(InferenceRule)),
+        ('()[],SUBP', set(CommonToken)),
+        ('AND ORr', {Op.conjunction, 'ORr'}),
+        ('ANDpq OR', {'ANDpq', Op.disjunction}),
+    ])
+    def test_set(self, string, result):
+        assert set(Lexer(string)) == result
+
+    @pytest.mark.parametrize(['string', 'result'], [
         ('az,() 123', ['az', CommonToken.comma, CommonToken.left_parenthesis,
                        CommonToken.right_parenthesis, 123]),
-        ('XE RE S', [InferenceRule.contradiction_elimination, InferenceRule.reiteration,
-                     InferenceRule.supposition]),
-        (' [\t] \t  0   ab123', [CommonToken.left_bracket, CommonToken.right_bracket,
-                                 0, 'ab123'])
+        ('(10 (AND (x) (y)) ([] S))', [CommonToken.left_parenthesis, 10, CommonToken.left_parenthesis,
+                                       Op.conjunction, CommonToken.left_parenthesis, 'x', CommonToken.right_parenthesis,
+                                       CommonToken.left_parenthesis, 'y', CommonToken.right_parenthesis,
+                                       CommonToken.right_parenthesis, CommonToken.left_parenthesis,
+                                       CommonToken.left_bracket, CommonToken.right_bracket,
+                                       InferenceRule.supposition, CommonToken.right_parenthesis,
+                                       CommonToken.right_parenthesis]),
+        (' [\t] \n\t  0   ab123', [CommonToken.left_bracket, CommonToken.right_bracket,
+                                   0, 'ab123'])
     ])
     def test_listing(self, string, result):
         assert list(Lexer(string)) == result
@@ -29,6 +45,7 @@ class ListLexer:
     """
     An iterable returning values from a list, and allowing a .peek() operation.
     """
+
     def __init__(self, values):
         self.values = values
 

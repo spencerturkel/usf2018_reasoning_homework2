@@ -17,13 +17,13 @@ class QuantifiedConstant(Enum):
 
 @unique
 class Op(Enum):
-    universal = 1
-    existence = 2
-    contradiction = 3
-    conjunction = 4
-    disjunction = 5
-    implication = 6
-    negation = 7
+    universal = 3
+    existence = 4
+    contradiction = 5
+    conjunction = 6
+    disjunction = 7
+    implication = 8
+    negation = 9
 
     def __repr__(self):
         return 'Op.{0}'.format(self.name)
@@ -31,22 +31,22 @@ class Op(Enum):
 
 @unique
 class InferenceRule(Enum):
-    supposition = 1
-    conjunction_introduction = 2
-    conjunction_elimination = 3
-    disjunction_introduction = 4
-    disjunction_elimination = 5
-    implication_introduction = 6
-    implication_elimination = 7
-    negation_introduction = 8
-    negation_elimination = 9
-    universal_introduction = 10
-    universal_elimination = 11
-    existential_introduction = 12
-    existential_elimination = 13
-    contradiction_introduction = 14
-    contradiction_elimination = 15
-    reiteration = 16
+    supposition = 10
+    conjunction_introduction = 11
+    conjunction_elimination = 12
+    disjunction_introduction = 13
+    disjunction_elimination = 14
+    implication_introduction = 15
+    implication_elimination = 16
+    negation_introduction = 17
+    negation_elimination = 18
+    universal_introduction = 19
+    universal_elimination = 20
+    existential_introduction = 21
+    existential_elimination = 22
+    contradiction_introduction = 23
+    contradiction_elimination = 24
+    reiteration = 25
 
     def __repr__(self):
         return 'InferenceRule.{0}'.format(self.name)
@@ -54,12 +54,12 @@ class InferenceRule(Enum):
 
 @unique
 class CommonToken(Enum):
-    left_parenthesis = 1
-    right_parenthesis = 2
-    left_bracket = 3
-    right_bracket = 4
-    comma = 5
-    sub_proof = 6
+    left_parenthesis = 26
+    right_parenthesis = 27
+    left_bracket = 28
+    right_bracket = 29
+    comma = 30
+    sub_proof = 31
 
     def __repr__(self):
         return 'CommonToken.{0}'.format(self.name)
@@ -78,6 +78,40 @@ class Lexer:
     # regular expressions compiled for lexing
     _index_regex = re.compile(r'\d+')
     _object_regex = re.compile('[A-Za-z0-9]+')
+
+    _token_lengths = {
+        Op.universal: len('FORALL'),
+        Op.existence: len('EXISTS'),
+        Op.contradiction: len('CONTR'),
+        Op.conjunction: len('AND'),
+        Op.disjunction: len('OR'),
+        Op.implication: len('IMPLIES'),
+        Op.negation: len('NOT'),
+        CommonToken.left_parenthesis: len('('),
+        CommonToken.right_parenthesis: len(')'),
+        CommonToken.left_bracket: len('['),
+        CommonToken.right_bracket: len(']'),
+        CommonToken.comma: len(','),
+        CommonToken.sub_proof: len('SUBP'),
+        QuantifiedConstant.universal: len('UCONST'),
+        QuantifiedConstant.existential: len('ECONST'),
+        InferenceRule.supposition: len('S'),
+        InferenceRule.conjunction_introduction: len('CI'),
+        InferenceRule.conjunction_elimination: len('CE'),
+        InferenceRule.disjunction_introduction: len('DI'),
+        InferenceRule.disjunction_elimination: len('DE'),
+        InferenceRule.implication_introduction: len('II'),
+        InferenceRule.implication_elimination: len('IE'),
+        InferenceRule.negation_introduction: len('NI'),
+        InferenceRule.negation_elimination: len('NE'),
+        InferenceRule.contradiction_introduction: len('XI'),
+        InferenceRule.contradiction_elimination: len('XE'),
+        InferenceRule.universal_introduction: len('AI'),
+        InferenceRule.universal_elimination: len('AE'),
+        InferenceRule.existential_introduction: len('EI'),
+        InferenceRule.existential_elimination: len('EE'),
+        InferenceRule.reiteration: len('RE'),
+    }
 
     def __init__(self, text):
         self.length = len(text)
@@ -125,8 +159,6 @@ class Lexer:
             return Op.implication
         if self._next_word_is('NOT'):
             return Op.negation
-        if self._next_word_is('S'):
-            return InferenceRule.supposition
         if self._next_word_is('CI'):
             return InferenceRule.conjunction_introduction
         if self._next_word_is('CE'):
@@ -157,6 +189,8 @@ class Lexer:
             return InferenceRule.contradiction_elimination
         if self._next_word_is('RE'):
             return InferenceRule.reiteration
+        if self._next_word_is('S'):
+            return InferenceRule.supposition
         match = self._next_word_match(Lexer._index_regex)
         if match:
             return int(match.group(0))
@@ -173,7 +207,10 @@ class Lexer:
             self.index += 1
 
     def _next_word_is(self, word):
-        return self.text.startswith(word, self.index)
+        if not self.text.startswith(word, self.index):
+            return False
+        end_index = self.index + len(word)
+        return end_index >= self.length or not self._object_regex.match(self.text[end_index])
 
     def _next_word_match(self, regex):
         return regex.match(self.text, self.index)
@@ -181,106 +218,18 @@ class Lexer:
     def __next__(self):
         if self.index == self.length:
             raise StopIteration
-        next_char = self._next_char()
-        if next_char == '(':
-            self.index += len('(')
-            return CommonToken.left_parenthesis
-        if next_char == ')':
-            self.index += len(')')
-            return CommonToken.right_parenthesis
-        if next_char == '[':
-            self.index += len('[')
-            return CommonToken.left_bracket
-        if next_char == ']':
-            self.index += len(']')
-            return CommonToken.right_bracket
-        if next_char == ',':
-            self.index += len(',')
-            return CommonToken.comma
-        if self._next_word_is('SUBP'):
-            self.index += len('SUBP')
-            return CommonToken.sub_proof
-        if self._next_word_is('UCONST'):
-            self.index += len('UCONST')
-            return QuantifiedConstant.universal
-        if self._next_word_is('ECONST'):
-            self.index += len('ECONST')
-            return QuantifiedConstant.existential
-        if self._next_word_is('FORALL'):
-            self.index += len('FORALL')
-            return Op.universal
-        if self._next_word_is('EXISTS'):
-            self.index += len('EXISTS')
-            return Op.existence
-        if self._next_word_is('CONTR'):
-            self.index += len('CONTR')
-            return Op.contradiction
-        if self._next_word_is('AND'):
-            self.index += len('AND')
-            return Op.conjunction
-        if self._next_word_is('OR'):
-            self.index += len('OR')
-            return Op.disjunction
-        if self._next_word_is('IMPLIES'):
-            self.index += len('IMPLIES')
-            return Op.implication
-        if self._next_word_is('NOT'):
-            self.index += len('NOT')
-            return Op.negation
-        if self._next_word_is('S'):
-            self.index += len('S')
-            return InferenceRule.supposition
-        if self._next_word_is('CI'):
-            self.index += len('CI')
-            return InferenceRule.conjunction_introduction
-        if self._next_word_is('CE'):
-            self.index += len('CE')
-            return InferenceRule.conjunction_elimination
-        if self._next_word_is('DI'):
-            self.index += len('DI')
-            return InferenceRule.disjunction_introduction
-        if self._next_word_is('DE'):
-            self.index += len('DE')
-            return InferenceRule.disjunction_elimination
-        if self._next_word_is('II'):
-            self.index += len('II')
-            return InferenceRule.implication_introduction
-        if self._next_word_is('IE'):
-            self.index += len('IE')
-            return InferenceRule.implication_elimination
-        if self._next_word_is('NI'):
-            self.index += len('NI')
-            return InferenceRule.negation_introduction
-        if self._next_word_is('NE'):
-            self.index += len('NE')
-            return InferenceRule.negation_elimination
-        if self._next_word_is('AI'):
-            self.index += len('AI')
-            return InferenceRule.universal_introduction
-        if self._next_word_is('AE'):
-            self.index += len('AE')
-            return InferenceRule.universal_elimination
-        if self._next_word_is('EI'):
-            self.index += len('EI')
-            return InferenceRule.existential_introduction
-        if self._next_word_is('EE'):
-            self.index += len('EE')
-            return InferenceRule.existential_elimination
-        if self._next_word_is('XI'):
-            self.index += len('XI')
-            return InferenceRule.contradiction_introduction
-        if self._next_word_is('XE'):
-            self.index += len('XE')
-            return InferenceRule.contradiction_elimination
-        if self._next_word_is('RE'):
-            self.index += len('RE')
-            return InferenceRule.reiteration
-        match = self._next_word_match(Lexer._index_regex)
+        next_token = self.peek()
+        if next_token is None:
+            raise StopIteration
+        if next_token in self._token_lengths:
+            self.index += self._token_lengths[next_token]
+            return next_token
+        match = self._next_word_match(self._index_regex)
         if match:
             index_lexeme = match.group(0)
             self.index += len(index_lexeme)
             return int(index_lexeme)
-        match = self._next_word_match(Lexer._object_regex)
+        match = self._next_word_match(self._object_regex)
         if match:
             object_lexeme = match.group(0)
             self.index += len(object_lexeme)
