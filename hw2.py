@@ -1086,35 +1086,69 @@ def is_valid_reiteration(proof, citations):
 
 
 def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols):
-    if line_number in context:
+    """
+    Validates the line, given the current context and symbol set.
+    :param line_number: the index of the line
+    :param expr: the expression being proved
+    :param cited_line_numbers: the lines referred to
+    :param rule: the inference rule used
+    :param context: dictionary of previous proofs by line number
+    :param symbols: set of previous symbols
+    :return: whether the line is valid
+
+    >>> is_valid_line(10, ('x',), [], InferenceRule.supposition, {10: ('y',)}, {'y'})
+    False
+    >>> is_valid_line(10, 'x', [], InferenceRule.supposition, {5: ('y',)}, {'y'})
+    False
+    >>> is_valid_line(10, ('x',), [], InferenceRule.supposition, {5: ('x',)}, {'x'})
+    False
+    >>> is_valid_line(10, ('x',), [5], InferenceRule.supposition, {5: ('x',)}, {'x'})
+    False
+    >>> is_valid_line(10, ('x',), [], InferenceRule.supposition, {5: ('y',)}, {'x', 'y'})
+    True
+    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [5], QuantifiedConstant.universal_constant, {5: ('x',)}, {'x'})
+    False
+    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [], QuantifiedConstant.universal_constant, {5: ('x',)}, {'x'})
+    False
+    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [], QuantifiedConstant.universal_constant, {}, set())
+    True
+    >>> is_valid_line(10, (QuantifiedConstant.existential_constant, 'a', ('P', 'a')), [5], QuantifiedConstant.existential_constant,{5: (Op.existence, 'x', ('P', 'x'))}, {'a', 'x', 'P'})
+    False
+    >>> is_valid_line(10, (QuantifiedConstant.existential_constant, 'a', ('P', 'a')), [5], QuantifiedConstant.existential_constant,{5: (Op.existence, 'x', ('P', 'x'))}, {'x', 'P'})
+    True
+    >>> is_valid_line(20, (Op.conjunction, ('Q', 'a'), ('P', 'a')), [5, 10], InferenceRule.conjunction_introduction,{5: ('Q', 'a'), 10: ('P', 'a')}, {'a', 'Q', 'P'})
+    True
+    >>> is_valid_line(20, ('Q', 'a'), [10], InferenceRule.conjunction_elimination,{10: (Op.conjunction, ('Q', 'a'), ('P', 'a'))}, {'a', 'Q', 'P'})
+    True
+    >>> is_valid_line(20, (Op.disjunction, ('Q', 'a'), ('P', 'a')), [5], InferenceRule.disjunction_introduction,{5: ('Q', 'a')}, {'a', 'Q', 'P'})
+    True
+    """
+    if line_number in context or isinstance(expr, str):
         return False
 
     if rule == InferenceRule.supposition:
-        if len(cited_line_numbers) == 0 or isinstance(expr, str) or expr in context.values():
-            return False
-        return True
+        return len(cited_line_numbers) == 0 and expr not in context.values()
 
     if rule == QuantifiedConstant.universal_constant:
         if len(cited_line_numbers) != 0 or len(expr) != 2:
             return False
         quantifier, sym = expr
-        if quantifier != QuantifiedConstant.universal_constant or sym in symbols:
-            return False
-        return True
+        return quantifier == QuantifiedConstant.universal_constant and sym not in symbols
 
     if rule == QuantifiedConstant.existential_constant:
-        if len(cited_line_numbers) != 1 or len(expr) != 3 or cited_line_numbers[0] not in context:
+        if len(cited_line_numbers) != 1 or len(expr) != 3:
+            return False
+        [cited_line] = cited_line_numbers
+        if cited_line not in context:
             return False
         quantifier, sym, prop = expr
-        if quantifier != QuantifiedConstant.existential_constant:
+        if quantifier != QuantifiedConstant.existential_constant or sym in symbols:
             return False
-        citation = context[cited_line_numbers[0]]
-        if len(citation) != 3 or citation[0] != QuantifiedConstant.existential_constant:
+        citation = context[cited_line]
+        if len(citation) != 3:
             return False
-        _, var, ex_prop = citation
-        if not substitute(sym, var, ex_prop) == prop:
-            return False
-        return True
+        cited_quantifier, var, ex_prop = citation
+        return cited_quantifier == Op.existence and substitute(sym, var, ex_prop) == prop
 
     citations = []
     for cited_index in cited_line_numbers:
@@ -1205,6 +1239,12 @@ def validate_proof(proof, context, symbols):
     return context, symbols
 
 
+def verify(proof_str):
+    context, _ = validate_proof(Parser().parse(proof_str), dict(), set())
+    [sub_proof_kind] = context.keys()
+    return 'V' if sub_proof_kind == SubProofKind.conditional else 'I'
+
+
 # noinspection PyPep8Naming
 def verifyProof(P):
     """
@@ -1216,8 +1256,6 @@ def verifyProof(P):
     """
     # noinspection PyBroadException
     try:
-        context, _ = validate_proof(Parser().parse(P), dict(), set())
-        [sub_proof_kind] = context.keys()
-        return 'V' if sub_proof_kind == SubProofKind.conditional else 'I'
+        return verify(P)
     except Exception:
         return 'I'
