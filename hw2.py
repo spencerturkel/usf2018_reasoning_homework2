@@ -75,43 +75,7 @@ class Lexer:
     You can also peek at the next character (excluding whitespace).
     """
 
-    # regular expressions compiled for lexing
-    _index_regex = re.compile(r'\d+')
-    _object_regex = re.compile('[A-Za-z0-9]+')
-
-    _token_lengths = {
-        Op.universal: len('FORALL'),
-        Op.existence: len('EXISTS'),
-        Op.contradiction: len('CONTR'),
-        Op.conjunction: len('AND'),
-        Op.disjunction: len('OR'),
-        Op.implication: len('IMPLIES'),
-        Op.negation: len('NOT'),
-        CommonToken.left_parenthesis: len('('),
-        CommonToken.right_parenthesis: len(')'),
-        CommonToken.left_bracket: len('['),
-        CommonToken.right_bracket: len(']'),
-        CommonToken.comma: len(','),
-        CommonToken.sub_proof: len('SUBP'),
-        QuantifiedConstant.universal: len('UCONST'),
-        QuantifiedConstant.existential: len('ECONST'),
-        InferenceRule.supposition: len('S'),
-        InferenceRule.conjunction_introduction: len('CI'),
-        InferenceRule.conjunction_elimination: len('CE'),
-        InferenceRule.disjunction_introduction: len('DI'),
-        InferenceRule.disjunction_elimination: len('DE'),
-        InferenceRule.implication_introduction: len('II'),
-        InferenceRule.implication_elimination: len('IE'),
-        InferenceRule.negation_introduction: len('NI'),
-        InferenceRule.negation_elimination: len('NE'),
-        InferenceRule.contradiction_introduction: len('XI'),
-        InferenceRule.contradiction_elimination: len('XE'),
-        InferenceRule.universal_introduction: len('AI'),
-        InferenceRule.universal_elimination: len('AE'),
-        InferenceRule.existential_introduction: len('EI'),
-        InferenceRule.existential_elimination: len('EE'),
-        InferenceRule.reiteration: len('RE'),
-    }
+    _word_regex = re.compile('[A-Za-z0-9]+')
 
     def __init__(self, text):
         self.length = len(text)
@@ -121,120 +85,44 @@ class Lexer:
     def __iter__(self):
         return self
 
+    def __next__(self):
+        next_token = self._next_lexeme()
+        if not next_token:
+            raise StopIteration
+        self.index += len(next_token)
+        return int(next_token) if next_token.isdigit() else next_token
+
     def peek(self):
         """
         Peeks at the next lexeme in the text.
         :return: The next lexeme in the text, or None if there are none.
         """
-        if self.index == self.length:
+        next_token = self._next_lexeme()
+        if not next_token:
             return None
+        return int(next_token) if next_token.isdigit() else next_token
+
+    def _next_lexeme(self):
+        """
+        Peeks at the next lexeme in the text.
+        :return: The next lexeme in the text, or None if there are none.
+        """
         next_char = self._next_char()
-        if next_char == '(':
-            return CommonToken.left_parenthesis
-        if next_char == ')':
-            return CommonToken.right_parenthesis
-        if next_char == '[':
-            return CommonToken.left_bracket
-        if next_char == ']':
-            return CommonToken.right_bracket
-        if next_char == ',':
-            return CommonToken.comma
-        if self._next_word_is('SUBP'):
-            return CommonToken.sub_proof
-        if self._next_word_is('UCONST'):
-            return QuantifiedConstant.universal
-        if self._next_word_is('ECONST'):
-            return QuantifiedConstant.existential
-        if self._next_word_is('FORALL'):
-            return Op.universal
-        if self._next_word_is('EXISTS'):
-            return Op.existence
-        if self._next_word_is('CONTR'):
-            return Op.contradiction
-        if self._next_word_is('AND'):
-            return Op.conjunction
-        if self._next_word_is('OR'):
-            return Op.disjunction
-        if self._next_word_is('IMPLIES'):
-            return Op.implication
-        if self._next_word_is('NOT'):
-            return Op.negation
-        if self._next_word_is('CI'):
-            return InferenceRule.conjunction_introduction
-        if self._next_word_is('CE'):
-            return InferenceRule.conjunction_elimination
-        if self._next_word_is('DI'):
-            return InferenceRule.disjunction_introduction
-        if self._next_word_is('DE'):
-            return InferenceRule.disjunction_elimination
-        if self._next_word_is('II'):
-            return InferenceRule.implication_introduction
-        if self._next_word_is('IE'):
-            return InferenceRule.implication_elimination
-        if self._next_word_is('NI'):
-            return InferenceRule.negation_introduction
-        if self._next_word_is('NE'):
-            return InferenceRule.negation_elimination
-        if self._next_word_is('AI'):
-            return InferenceRule.universal_introduction
-        if self._next_word_is('AE'):
-            return InferenceRule.universal_elimination
-        if self._next_word_is('EI'):
-            return InferenceRule.existential_introduction
-        if self._next_word_is('EE'):
-            return InferenceRule.existential_elimination
-        if self._next_word_is('XI'):
-            return InferenceRule.contradiction_introduction
-        if self._next_word_is('XE'):
-            return InferenceRule.contradiction_elimination
-        if self._next_word_is('RE'):
-            return InferenceRule.reiteration
-        if self._next_word_is('S'):
-            return InferenceRule.supposition
-        match = self._next_word_match(Lexer._index_regex)
-        if match:
-            return int(match.group(0))
-        match = self._next_word_match(Lexer._object_regex)
+        if not next_char:
+            return None
+        if next_char in {'(', ')', '[', ']', ','}:
+            return next_char
+        match = self._word_regex.match(self.text, self.index)
         return match.group(0) if match else None
 
     def _next_char(self):
         while True:
             if self.index == self.length:
-                raise StopIteration
+                return None
             ch = self.text[self.index]
             if ch not in whitespace:
                 return ch
             self.index += 1
-
-    def _next_word_is(self, word):
-        if not self.text.startswith(word, self.index):
-            return False
-        end_index = self.index + len(word)
-        return end_index >= self.length or not self._object_regex.match(self.text[end_index])
-
-    def _next_word_match(self, regex):
-        return regex.match(self.text, self.index)
-
-    def __next__(self):
-        if self.index == self.length:
-            raise StopIteration
-        next_token = self.peek()
-        if next_token is None:
-            raise StopIteration
-        if next_token in self._token_lengths:
-            self.index += self._token_lengths[next_token]
-            return next_token
-        match = self._next_word_match(self._index_regex)
-        if match:
-            index_lexeme = match.group(0)
-            self.index += len(index_lexeme)
-            return int(index_lexeme)
-        match = self._next_word_match(self._object_regex)
-        if match:
-            object_lexeme = match.group(0)
-            self.index += len(object_lexeme)
-            return object_lexeme
-        raise InputSyntaxError
 
 
 class ParseError(Exception):
