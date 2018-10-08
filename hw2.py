@@ -196,8 +196,12 @@ def parse(lexer):
             return index, symbol, predicate, cited_index
 
         predicate = _predicate_after_open_paren()
+        _expect_next('(')
+        _expect_next('[')
         cited_indices = _indices()
+        _expect_next(']')
         rule = _rule()
+        _expect_next(')')
         return index, predicate, cited_indices, rule
 
     def _index():
@@ -233,15 +237,12 @@ def parse(lexer):
         return result
 
     def _indices():
-        _expect_next('(')
-        _expect_next('[')
         indices = []
         if lexer.peek() != ']':
             indices.append(_index())
             while lexer.peek() == ',':
                 next(lexer)
                 indices.append(_index())
-        _expect_next(']')
         return indices
 
     def _rule():
@@ -257,158 +258,6 @@ def parse(lexer):
         return token
 
     return _proof()
-
-
-class Parser:
-    def __init__(self):
-        self._scanner = None
-
-    def parse(self, text):
-        """
-        This is a recursive descent parser for the input lexemes, returning a structured Proof.
-
-        :param text: the input
-        :return: an element of type Proof (defined below).
-        :except ParseError: when the proof cannot be parsed.
-
-        Result type::
-
-            Proof = Union[Tuple[int, List[Proof]], Tuple[int, Expr, Justification]]
-            Expr = Union[ str,
-                          Tuple[Op.universal,  str,  Expr],
-                          Tuple[Op.existence,  str,  Expr],
-                          Tuple[QuantifiedConstant.universal,  str],
-                          Tuple[QuantifiedConstant.existential,  str,  Expr],
-                          Tuple[Op.conjunction,  Expr,  Expr],
-                          Tuple[Op.disjunction,  Expr,  Expr],
-                          Tuple[Op.implication,  Expr,  Expr],
-                          Tuple[Op.negation,  Expr],
-                          Op.contradiction,
-                          Tuple[str, Expr*],
-                        ]
-            Justification = List[int] * InferenceRule
-
-        >>> p = Parser()
-        >>> p.parse('(10 (AND p (q x)) ([5] S))')
-        (10, (Op.conjunction, 'p', ('q', 'x')), ([5], InferenceRule.supposition))
-        >>> p.parse('(SUBP 5 (10 (IMPLIES p (q x)) ([] S)) (20 p ([] S)) (30 (q x) ([10, 20] IE)))')
-        (5, [(10, (Op.implication, 'p', ('q', 'x')), ([], InferenceRule.supposition)), (20, 'p', ([], InferenceRule.supposition)), (30, ('q', 'x'), ([10, 20], InferenceRule.implication_elimination))])
-        >>> p.parse('(10 (OR p q) ([] S))')
-        (10, (Op.disjunction, 'p', 'q'), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (FORALL p (q r)) ([] S))')
-        (10, (Op.universal, 'p', ('q', 'r')), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (EXISTS p (q r)) ([] S))')
-        (10, (Op.existence, 'p', ('q', 'r')), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (UCONST p) ([] UCONST))')
-        (10, (QuantifiedConstant.universal, 'p'), ([], QuantifiedConstant.universal))
-        >>> p.parse('(10 (ECONST p (q p)) ([] ECONST))')
-        (10, (QuantifiedConstant.existential, 'p', ('q', 'p')), ([], QuantifiedConstant.existential))
-        >>> p.parse('(10 (NOT p) ([] S))')
-        (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (p x y) ([] S))')
-        (10, ('p', 'x', 'y'), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (p) ([] S))')
-        (10, ('p',), ([], InferenceRule.supposition))
-        >>> p.parse('(10 (CONTR) ([] S))')
-        (10, Op.contradiction, ([], InferenceRule.supposition))
-        """
-        self._scanner = Lexer(text)
-        return self._proof()
-
-    def _proof(self):
-        self._expect_next(CommonToken.left_parenthesis)
-        line = self._line()
-        self._expect_next(CommonToken.right_parenthesis)
-        return line
-
-    def _expect_next(self, token):
-        if next(self._scanner) != token:
-            raise ParseError
-
-    def _line(self):
-        token = self._next()
-        if token == CommonToken.sub_proof:
-            return self._next(), self._many_proofs()
-        if isinstance(token, int):
-            return token, self._expr(), self._justification()
-        raise ParseError
-
-    def _next(self):
-        return next(self._scanner)
-
-    def _many_proofs(self):
-        many_proofs = []
-        while self._peek() not in [CommonToken.right_parenthesis, None]:
-            many_proofs.append(self._proof())
-        return many_proofs
-
-    def _peek(self):
-        return self._scanner.peek()
-
-    def _expr(self):
-        token = self._next()
-        if token == CommonToken.left_parenthesis:
-            formula = self._formula()
-            self._expect_next(CommonToken.right_parenthesis)
-            return formula
-        if isinstance(token, str):
-            return token
-        raise ParseError
-
-    def _justification(self):
-        self._expect_next(CommonToken.left_parenthesis)
-        self._expect_next(CommonToken.left_bracket)
-        indices = self._indices()
-        rule = self._next()
-        if not isinstance(rule, InferenceRule) and not isinstance(rule, QuantifiedConstant):
-            raise ParseError
-        self._expect_next(CommonToken.right_parenthesis)
-        return indices, rule
-
-    def _indices(self):
-        token = self._next()
-        if isinstance(token, int):
-            return [token] + self._trailing_indices()
-        if token == CommonToken.right_bracket:
-            return []
-        raise ParseError
-
-    def _trailing_indices(self):
-        trailing_indices = []
-        while True:
-            token = self._next()
-            if token == CommonToken.comma:
-                index = self._next()
-                if not isinstance(index, int):
-                    raise ParseError
-                trailing_indices.append(index)
-            elif token == CommonToken.right_bracket:
-                return trailing_indices
-
-    def _formula(self):
-        token = self._next()
-        if token in [Op.universal, Op.existence, QuantifiedConstant.existential]:
-            return token, self._symbol(), self._expr()
-        if token == QuantifiedConstant.universal:
-            return token, self._symbol()
-        if token in [Op.conjunction, Op.disjunction, Op.implication]:
-            return token, self._expr(), self._expr()
-        if token == Op.negation:
-            return token, self._expr()
-        if token == Op.contradiction:
-            return token
-        if isinstance(token, str):
-            result = [token]
-            while self._peek() != CommonToken.right_parenthesis:
-                result.append(self._expr())
-            return tuple(result)
-        raise ParseError
-
-    def _symbol(self):
-        symbol = self._next()
-        if isinstance(symbol, str):
-            return symbol
-        raise ParseError
 
 
 class ValidationException(Exception):
@@ -1173,7 +1022,7 @@ def validate_proof(proof, context, symbols):
 
 
 def verify(proof_str):
-    context, _ = validate_proof(Parser().parse(proof_str), dict(), set())
+    context, _ = validate_proof(parse(proof_str), dict(), set())
     [sub_proof_kind] = context.keys()
     return 'V' if sub_proof_kind == SubProofKind.conditional else 'I'
 

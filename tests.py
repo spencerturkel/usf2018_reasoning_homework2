@@ -129,3 +129,23 @@ class TestParse:
                        '(', 'P', ')',
                        '(', '['] + tokens + [']', 'S', ')', ')']
         assert (10, ('P', []), citations, 'S') == parse(ListLexer(line_tokens))
+
+    @staticmethod
+    @pytest.mark.parametrize('lines, tokens', [
+        ([], []),
+        ([(10, ('P', []), [], 'S')], ['(', 10,
+                                      '(', 'P', ')',
+                                      '(', '[', ']', 'S', ')', ')']),
+        ([(10, ('P', []), [], 'S'),
+          (20, ('Q', ['x']), [], 'S')], [
+             '(', 10,
+             '(', 'P', ')',
+             '(', '[', ']', 'S', ')', ')',
+             '(', 20,
+             '(', 'Q', 'x', ')',
+             '(', '[', ']', 'S', ')', ')',
+         ]),
+    ])
+    def test_sub_proofs(lines, tokens):
+        line_tokens = ['(', 'SUBP', 10] + tokens + [')']
+        assert (10, lines) == parse(ListLexer(line_tokens))
