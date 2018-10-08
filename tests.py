@@ -41,6 +41,9 @@ class ListLexer:
     def __init__(self, values):
         self.values = values
 
+    def __iter__(self):
+        return self
+
     def __next__(self):
         try:
             return self.values.pop(0)
@@ -56,3 +59,16 @@ def test_list_lexer():
     assert 1 == l.peek()
     assert next(l) == 1
     assert 2 == l.peek()
+
+
+@pytest.mark.parametrize('ast,lexer', [
+    ((10, []), ListLexer(['(', 'SUBP', 10, ')'])),
+    ((10, 'x'), ListLexer(['(', 10,
+                           '(', 'UCONST', 'x', ')',
+                           '(', '[', ']', 'UCONST', ')', ')'])),
+    ((10, 'x', ('P', []), 5), ListLexer(['(', 10,
+                                         '(', 'ECONST', 'x', '(', 'P', ')', ')',
+                                         '(', '[', 5, ']', 'ECONST', ')', ')'])),
+])
+def test_parse(ast, lexer):
+    assert ast == parse(lexer)

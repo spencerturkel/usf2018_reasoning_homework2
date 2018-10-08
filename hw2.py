@@ -230,6 +230,7 @@ def parse(lexer):
         args = []
         while lexer.peek() != ')':
             args.append(_predicate() if lexer.peek() == '(' else _symbol())
+        next(lexer)
 
         return token, args
 
@@ -256,6 +257,8 @@ def parse(lexer):
         if not isinstance(token, str):
             raise ParseError
         return token
+
+    return _proof()
 
 
 class Parser:
