@@ -61,7 +61,7 @@ Let `ε` be the empty string.
 
 ```
 proof = ( line )
-line = SUBP number many-proofs
+line = SUBP index many-proofs
      | index predicate justification
      | index universal-constant
      | index existential-constant
@@ -72,16 +72,15 @@ universal-constant = ( UCONST symbol ) ( [ ] UCONST )
 existential-constant = ( ECONST symbol predicate ) ( [ index ] ECONST )
 expr = FORALL symbol predicate
      | EXISTS symbol predicate
-     | AND argument argument
-     | OR argument argument
-     | IMPLIES argument argument
-     | NOT argument
+     | AND predicate predicate
+     | OR predicate predicate
+     | IMPLIES predicate predicate
+     | NOT predicate
      | CONTR
-     | symbol many-arguments
+     | symbol objects
 indices = index trailing-indices | ε
-many-arguments = argument many-arguments | ε
+objects = symbol objects | predicate objects | ε
 trailing-indices = , index trailing-indices | ε
-argument = symbol | predicate
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.

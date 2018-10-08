@@ -138,7 +138,7 @@ def parse(lexer):
     Proof = Union[Tuple[int, List[Proof]],
                   Tuple[int, Predicate, List[int], str],
                   Tuple[int, str],
-                  Tuple[int, str, str, int]]
+                  Tuple[int, str, Predicate, int]]
     Predicate = Union[Tuple['FORALL', str, Predicate],
                       Tuple['EXISTS', str, Predicate],
                       Tuple['AND', Predicate, Predicate],
@@ -146,9 +146,116 @@ def parse(lexer):
                       Tuple['IMPLIES', Predicate, Predicate],
                       Tuple['NOT', Predicate],
                       'CONTR',
-                      Tuple[str, List[Predicate]],
+                      Tuple[str, List[Union[str, Predicate]]],
     :except ParseError: when the proof cannot be parsed.
     """
+
+    def _expect_next(token):
+        if next(lexer) != token:
+            raise ParseError
+
+    def _proof():
+        _expect_next('(')
+        line = _line()
+        _expect_next(')')
+        return line
+
+    def _line():
+        token = next(lexer)
+
+        if token == 'SUBP':
+            num = _index()
+            proofs = []
+            while lexer.peek() != ')':
+                proofs.append(_proof())
+            return num, proofs
+
+        if not isinstance(token, int):
+            raise ParseError
+        index = token
+
+        if next(lexer) != '(':
+            raise ParseError
+
+        if lexer.peek() == 'UCONST':
+            next(lexer)
+            symbol = next(lexer)
+            for token in ') ( [ ] UCONST )'.split(' '):
+                _expect_next(token)
+            return index, symbol
+
+        if lexer.peek() == 'ECONST':
+            next(lexer)
+            symbol = next(lexer)
+            predicate = _predicate()
+            for token in ') ( ['.split(' '):
+                _expect_next(token)
+            cited_index = _index()
+            for token in '] ECONST )'.split(' '):
+                _expect_next(token)
+            return index, symbol, predicate, cited_index
+
+        predicate = _predicate_after_open_paren()
+        cited_indices = _indices()
+        rule = _rule()
+        return index, predicate, cited_indices, rule
+
+    def _index():
+        token = next(lexer)
+        if not isinstance(token, int):
+            raise ParseError
+        return token
+
+    def _predicate():
+        _expect_next('(')
+        return _predicate_after_open_paren()
+
+    def _predicate_after_open_paren():
+        token = _symbol()
+
+        if token in {'FORALL', 'EXISTS'}:
+            symbol = _symbol()
+            predicate = _predicate()
+            return token, symbol, predicate
+
+        if token in {'AND', 'OR', 'IMPLIES'}:
+            return token, _predicate(), _predicate()
+
+        if token == 'NOT':
+            return token, _predicate()
+
+        if token == 'CONTR':
+            return token
+
+        args = []
+        while lexer.peek() != ')':
+            args.append(_predicate() if lexer.peek() == '(' else _symbol())
+
+        return token, args
+
+    def _indices():
+        _expect_next('(')
+        _expect_next('[')
+        indices = []
+        if lexer.peek() != ']':
+            indices.append(_index())
+            while lexer.peek() == ',':
+                next(lexer)
+                indices.append(_index())
+        _expect_next(']')
+        return indices
+
+    def _rule():
+        rule = next(lexer)
+        if rule not in {'RE'} | {x + y for x in 'CDINXAE' for y in 'IE'}:
+            raise ParseError
+        return rule
+
+    def _symbol():
+        token = next(lexer)
+        if not isinstance(token, str):
+            raise ParseError
+        return token
 
 
 class Parser:
