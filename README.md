@@ -54,30 +54,33 @@ inference-rule = S
                | XE
                | RE
 index = \d+
-symbol = [a-z0-9]+
+symbol = [A-Za-z0-9]+
 ```
 ## Grammar
 Let `ε` be the empty string.
 
 ```
 proof = ( line )
-line = SUBP number many-proofs | index expr justification
+line = SUBP number many-proofs
+     | index predicate justification
+     | index universal-constant
+     | index existential-constant
 many-proofs = proof many-proofs | ε
-expr = symbol | ( formula )
+predicate = ( expr )
 justification = ( [ indices ] inference-rule )
+universal-constant = ( UCONST symbol ) ( [ ] UCONST )
+existential-constant = ( ECONST symbol predicate ) ( [ index ] ECONST )
+expr = FORALL symbol predicate
+     | EXISTS symbol predicate
+     | AND predicate predicate
+     | OR predicate predicate
+     | IMPLIES predicate predicate
+     | NOT predicate
+     | CONTR
+     | symbol predicate-arguments
 indices = index trailing-indices | ε
+predicate-arguments = , symbol predicate-arguments | ε
 trailing-indices = , index trailing-indices | ε
-formula = FORALL symbol expr
-        | EXISTS symbol expr
-        | UCONST symbol
-        | ECONST symbol expr
-        | AND expr expr
-        | OR expr expr
-        | IMPLIES expr expr
-        | NOT expr
-        | CONTR
-        | symbol predicate-arguments
-predicate-arguments = expr predicate-arguments | ε
 ```
 # Inference Rules
 `R |- {P_0, P_1, ..., P_n} -> Q` means that inference rule `R` justifies `Q` within the context `{P_i | 0 <= i < n}`.

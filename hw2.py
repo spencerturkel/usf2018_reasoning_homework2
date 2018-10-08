@@ -8,8 +8,8 @@ from string import whitespace
 
 @unique
 class QuantifiedConstant(Enum):
-    universal_constant = 1
-    existential_constant = 2
+    universal = 1
+    existential = 2
 
     def __repr__(self):
         return 'QuantifiedConstant.{0}'.format(self.name)
@@ -73,40 +73,6 @@ class Lexer:
     """
     An iterable class for lexing.
     You can also peek at the next character (excluding whitespace).
-
-    >>> list(Lexer('az,() 123'))
-    ['az', CommonToken.comma, CommonToken.left_parenthesis, CommonToken.right_parenthesis, 123]
-    >>> list(Lexer('XE RE S'))
-    [InferenceRule.contradiction_elimination, InferenceRule.reiteration, InferenceRule.supposition]
-    >>> list(Lexer(' [\t] \t  0   ab123'))
-    [CommonToken.left_bracket, CommonToken.right_bracket, 0, 'ab123']
-    >>> l = Lexer(' [\t] \t  0   ab123')
-    >>> l.peek()
-    CommonToken.left_bracket
-    >>> next(l)
-    CommonToken.left_bracket
-    >>> l.peek()
-    CommonToken.right_bracket
-    >>> next(l)
-    CommonToken.right_bracket
-    >>> l.peek()
-    0
-    >>> next(l)
-    0
-    >>> l.peek()
-    'ab123'
-    >>> next(l)
-    'ab123'
-    >>> l.peek()
-    >>> next(l)
-    Traceback (most recent call last):
-        ...
-    StopIteration
-    >>> l = Lexer('Abc')
-    >>> l.peek()
-    'Abc'
-    >>> next(l)
-    'Abc'
     """
 
     # regular expressions compiled for lexing
@@ -142,9 +108,9 @@ class Lexer:
         if self._next_word_is('SUBP'):
             return CommonToken.sub_proof
         if self._next_word_is('UCONST'):
-            return QuantifiedConstant.universal_constant
+            return QuantifiedConstant.universal
         if self._next_word_is('ECONST'):
-            return QuantifiedConstant.existential_constant
+            return QuantifiedConstant.existential
         if self._next_word_is('FORALL'):
             return Op.universal
         if self._next_word_is('EXISTS'):
@@ -236,10 +202,10 @@ class Lexer:
             return CommonToken.sub_proof
         if self._next_word_is('UCONST'):
             self.index += len('UCONST')
-            return QuantifiedConstant.universal_constant
+            return QuantifiedConstant.universal
         if self._next_word_is('ECONST'):
             self.index += len('ECONST')
-            return QuantifiedConstant.existential_constant
+            return QuantifiedConstant.existential
         if self._next_word_is('FORALL'):
             self.index += len('FORALL')
             return Op.universal
@@ -326,6 +292,16 @@ class ParseError(Exception):
     pass
 
 
+def parse(lexer):
+    """
+    This is a recursive descent parser for the input lexemes, returning a structured Proof.
+
+    :param lexer: an iterator of lexemes allowing a .peek() operation for lookahead
+    :return: a Proof.
+    :except ParseError: when the proof cannot be parsed.
+    """
+
+
 class Parser:
     def __init__(self):
         self._scanner = None
@@ -334,7 +310,7 @@ class Parser:
         """
         This is a recursive descent parser for the input lexemes, returning a structured Proof.
 
-        :param text: a Fitch-style proof (see README or assignment requirements for format).
+        :param text: the input
         :return: an element of type Proof (defined below).
         :except ParseError: when the proof cannot be parsed.
 
@@ -344,8 +320,8 @@ class Parser:
             Expr = Union[ str,
                           Tuple[Op.universal,  str,  Expr],
                           Tuple[Op.existence,  str,  Expr],
-                          Tuple[QuantifiedConstant.universal_constant,  str],
-                          Tuple[QuantifiedConstant.existential_constant,  str,  Expr],
+                          Tuple[QuantifiedConstant.universal,  str],
+                          Tuple[QuantifiedConstant.existential,  str,  Expr],
                           Tuple[Op.conjunction,  Expr,  Expr],
                           Tuple[Op.disjunction,  Expr,  Expr],
                           Tuple[Op.implication,  Expr,  Expr],
@@ -367,9 +343,9 @@ class Parser:
         >>> p.parse('(10 (EXISTS p (q r)) ([] S))')
         (10, (Op.existence, 'p', ('q', 'r')), ([], InferenceRule.supposition))
         >>> p.parse('(10 (UCONST p) ([] UCONST))')
-        (10, (QuantifiedConstant.universal_constant, 'p'), ([], QuantifiedConstant.universal_constant))
+        (10, (QuantifiedConstant.universal, 'p'), ([], QuantifiedConstant.universal))
         >>> p.parse('(10 (ECONST p (q p)) ([] ECONST))')
-        (10, (QuantifiedConstant.existential_constant, 'p', ('q', 'p')), ([], QuantifiedConstant.existential_constant))
+        (10, (QuantifiedConstant.existential, 'p', ('q', 'p')), ([], QuantifiedConstant.existential))
         >>> p.parse('(10 (NOT p) ([] S))')
         (10, (Op.negation, 'p'), ([], InferenceRule.supposition))
         >>> p.parse('(10 (p x y) ([] S))')
@@ -454,9 +430,9 @@ class Parser:
 
     def _formula(self):
         token = self._next()
-        if token in [Op.universal, Op.existence, QuantifiedConstant.existential_constant]:
+        if token in [Op.universal, Op.existence, QuantifiedConstant.existential]:
             return token, self._symbol(), self._expr()
-        if token == QuantifiedConstant.universal_constant:
+        if token == QuantifiedConstant.universal:
             return token, self._symbol()
         if token in [Op.conjunction, Op.disjunction, Op.implication]:
             return token, self._expr(), self._expr()
@@ -832,9 +808,9 @@ def expr_symbols(expr):
     True
     >>> expr_symbols((Op.existence, 'x', ('P',))) == {'P', 'x'}
     True
-    >>> expr_symbols((QuantifiedConstant.universal_constant, 'x')) == {'x'}
+    >>> expr_symbols((QuantifiedConstant.universal, 'x')) == {'x'}
     True
-    >>> expr_symbols((QuantifiedConstant.existential_constant, 'x', ('P',))) == {'P', 'x'}
+    >>> expr_symbols((QuantifiedConstant.existential, 'x', ('P',))) == {'P', 'x'}
     True
     >>> expr_symbols((Op.conjunction, ('P',), ('Q',))) == {'P', 'Q'}
     True
@@ -857,10 +833,10 @@ def expr_symbols(expr):
         if sub_expr == Op.contradiction:
             return
         tag = sub_expr[0]
-        if tag in [Op.universal, Op.existence, QuantifiedConstant.existential_constant]:
+        if tag in [Op.universal, Op.existence, QuantifiedConstant.existential]:
             result.add(sub_expr[1])
             go(sub_expr[2])
-        if tag == QuantifiedConstant.universal_constant:
+        if tag == QuantifiedConstant.universal:
             result.add(sub_expr[1])
         if tag == Op.negation:
             go(sub_expr[1])
@@ -1106,15 +1082,15 @@ def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols)
     False
     >>> is_valid_line(10, ('x',), [], InferenceRule.supposition, {5: ('y',)}, {'x', 'y'})
     True
-    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [5], QuantifiedConstant.universal_constant, {5: ('x',)}, {'x'})
+    >>> is_valid_line(10, (QuantifiedConstant.universal, 'x'), [5], QuantifiedConstant.universal, {5: ('x',)}, {'x'})
     False
-    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [], QuantifiedConstant.universal_constant, {5: ('x',)}, {'x'})
+    >>> is_valid_line(10, (QuantifiedConstant.universal, 'x'), [], QuantifiedConstant.universal, {5: ('x',)}, {'x'})
     False
-    >>> is_valid_line(10, (QuantifiedConstant.universal_constant, 'x'), [], QuantifiedConstant.universal_constant, {}, set())
+    >>> is_valid_line(10, (QuantifiedConstant.universal, 'x'), [], QuantifiedConstant.universal, {}, set())
     True
-    >>> is_valid_line(10, (QuantifiedConstant.existential_constant, 'a', ('P', 'a')), [5], QuantifiedConstant.existential_constant,{5: (Op.existence, 'x', ('P', 'x'))}, {'a', 'x', 'P'})
+    >>> is_valid_line(10, (QuantifiedConstant.existential, 'a', ('P', 'a')), [5], QuantifiedConstant.existential,{5: (Op.existence, 'x', ('P', 'x'))}, {'a', 'x', 'P'})
     False
-    >>> is_valid_line(10, (QuantifiedConstant.existential_constant, 'a', ('P', 'a')), [5], QuantifiedConstant.existential_constant,{5: (Op.existence, 'x', ('P', 'x'))}, {'x', 'P'})
+    >>> is_valid_line(10, (QuantifiedConstant.existential, 'a', ('P', 'a')), [5], QuantifiedConstant.existential,{5: (Op.existence, 'x', ('P', 'x'))}, {'x', 'P'})
     True
     >>> is_valid_line(20, (Op.conjunction, ('Q', 'a'), ('P', 'a')), [5, 10], InferenceRule.conjunction_introduction,{5: ('Q', 'a'), 10: ('P', 'a')}, {'a', 'Q', 'P'})
     True
@@ -1129,20 +1105,20 @@ def is_valid_line(line_number, expr, cited_line_numbers, rule, context, symbols)
     if rule == InferenceRule.supposition:
         return len(cited_line_numbers) == 0 and expr not in context.values()
 
-    if rule == QuantifiedConstant.universal_constant:
+    if rule == QuantifiedConstant.universal:
         if len(cited_line_numbers) != 0 or len(expr) != 2:
             return False
         quantifier, sym = expr
-        return quantifier == QuantifiedConstant.universal_constant and sym not in symbols
+        return quantifier == QuantifiedConstant.universal and sym not in symbols
 
-    if rule == QuantifiedConstant.existential_constant:
+    if rule == QuantifiedConstant.existential:
         if len(cited_line_numbers) != 1 or len(expr) != 3:
             return False
         [cited_line] = cited_line_numbers
         if cited_line not in context:
             return False
         quantifier, sym, prop = expr
-        if quantifier != QuantifiedConstant.existential_constant or sym in symbols:
+        if quantifier != QuantifiedConstant.existential or sym in symbols:
             return False
         citation = context[cited_line]
         if len(citation) != 3:
@@ -1199,9 +1175,9 @@ def validate_proof(proof, context, symbols):
             context = context.copy()
             context[line_number] = expr
             return context, symbols | expr_symbols(expr)
-        if rule == QuantifiedConstant.universal_constant:
+        if rule == QuantifiedConstant.universal:
             return context, symbols | expr[1]
-        if rule == QuantifiedConstant.existential_constant:
+        if rule == QuantifiedConstant.existential:
             context = context.copy()
             context[line_number] = expr[2]
             return context, symbols | expr[1]
@@ -1224,11 +1200,11 @@ def validate_proof(proof, context, symbols):
                 if sub_proof_kind != SubProofKind.arbitrary:
                     return None
                 sub_proof_kind = SubProofKind.conditional
-            if rule == QuantifiedConstant.universal_constant:
+            if rule == QuantifiedConstant.universal:
                 if sub_proof_kind != SubProofKind.arbitrary:
                     return None
                 sub_proof_kind = SubProofKind.universal
-            if rule == QuantifiedConstant.existential_constant:
+            if rule == QuantifiedConstant.existential:
                 if sub_proof_kind != SubProofKind.arbitrary:
                     return None
                 sub_proof_kind = SubProofKind.existential
