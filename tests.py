@@ -61,14 +61,71 @@ def test_list_lexer():
     assert 2 == l.peek()
 
 
-@pytest.mark.parametrize('ast,lexer', [
-    ((10, []), ListLexer(['(', 'SUBP', 10, ')'])),
-    ((10, 'x'), ListLexer(['(', 10,
-                           '(', 'UCONST', 'x', ')',
-                           '(', '[', ']', 'UCONST', ')', ')'])),
-    ((10, 'x', ('P', []), 5), ListLexer(['(', 10,
-                                         '(', 'ECONST', 'x', '(', 'P', ')', ')',
-                                         '(', '[', 5, ']', 'ECONST', ')', ')'])),
-])
-def test_parse(ast, lexer):
-    assert ast == parse(lexer)
+class TestParse:
+    @staticmethod
+    @pytest.mark.parametrize('ast,lexer', [
+        ((10, []), ListLexer(['(', 'SUBP', 10, ')'])),
+        ((10, 'x'), ListLexer(['(', 10,
+                               '(', 'UCONST', 'x', ')',
+                               '(', '[', ']', 'UCONST', ')', ')'])),
+        ((10, 'x', ('P', []), 5), ListLexer(['(', 10,
+                                             '(', 'ECONST', 'x', '(', 'P', ')', ')',
+                                             '(', '[', 5, ']', 'ECONST', ')', ')'])),
+        ((10, ('P', []), [], 'S'), ListLexer(['(', 10,
+                                              '(', 'P', ')',
+                                              '(', '[', ']', 'S', ')', ')'])),
+    ])
+    def test_special_lines(ast, lexer):
+        assert ast == parse(lexer)
+
+    @staticmethod
+    @pytest.mark.parametrize('rule',
+                             ['S', 'CI', 'CE', 'DI', 'DE',
+                              'II', 'IE', 'NI', 'NE', 'AI',
+                              'AE', 'EI', 'EE', 'XI', 'XE', 'RE'])
+    def test_rules(rule):
+        line_tokens = ['(', 10,
+                       '(', 'P', ')',
+                       '(', '[', ']', rule, ')', ')']
+        assert (10, ('P', []), [], rule) == parse(ListLexer(line_tokens))
+
+    @staticmethod
+    @pytest.mark.parametrize('predicate, tokens', [
+        (('FORALL', 'x', ('P', [])), ['FORALL', 'x', '(', 'P', ')']),
+        (('EXISTS', 'x', ('P', [])), ['EXISTS', 'x', '(', 'P', ')']),
+        (('AND', ('P', []), ('Q', [])), ['AND', '(', 'P', ')', '(', 'Q', ')']),
+        (('OR', ('P', []), ('Q', [])), ['OR', '(', 'P', ')', '(', 'Q', ')']),
+        (('IMPLIES', ('P', []), ('Q', [])), ['IMPLIES', '(', 'P', ')', '(', 'Q', ')']),
+        (('NOT', ('P', [])), ['NOT', '(', 'P', ')']),
+        (('P', ['x', ('Q', ['y']), 'z']), ['P', 'x', '(', 'Q', 'y', ')', 'z']),
+        ('CONTR', ['CONTR']),
+    ])
+    def test_predicates(predicate, tokens):
+        line_tokens = ['(', 10, '(',
+                       ] + tokens + [
+                          ')', '(', '[', ']', 'S', ')', ')']
+        assert (10, predicate, [], 'S') == parse(ListLexer(line_tokens))
+
+    @staticmethod
+    @pytest.mark.parametrize('index', [
+        10, 5, 0, 101, 15
+    ])
+    def test_line_indices(index):
+        subproof_tokens = ['(', 'SUBP', index, ')']
+        line_tokens = ['(', index,
+                       '(', 'P', ')',
+                       '(', '[', ']', 'S', ')', ')']
+        assert (index, []) == parse(ListLexer(subproof_tokens))
+        assert (index, ('P', []), [], 'S') == parse(ListLexer(line_tokens))
+
+    @staticmethod
+    @pytest.mark.parametrize('citations, tokens', [
+        ([], []),
+        ([5, 10, 15], [5, ',', 10, ',', 15]),
+        ([0], [0])
+    ])
+    def test_citations(citations, tokens):
+        line_tokens = ['(', 10,
+                       '(', 'P', ')',
+                       '(', '['] + tokens + [']', 'S', ')', ')']
+        assert (10, ('P', []), citations, 'S') == parse(ListLexer(line_tokens))

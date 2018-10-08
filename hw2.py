@@ -216,23 +216,21 @@ def parse(lexer):
         if token in {'FORALL', 'EXISTS'}:
             symbol = _symbol()
             predicate = _predicate()
-            return token, symbol, predicate
+            result = token, symbol, predicate
+        elif token in {'AND', 'OR', 'IMPLIES'}:
+            result = token, _predicate(), _predicate()
+        elif token == 'NOT':
+            result = token, _predicate()
+        elif token == 'CONTR':
+            result = token
+        else:
+            args = []
+            while lexer.peek() != ')':
+                args.append(_predicate() if lexer.peek() == '(' else _symbol())
+            result = token, args
 
-        if token in {'AND', 'OR', 'IMPLIES'}:
-            return token, _predicate(), _predicate()
-
-        if token == 'NOT':
-            return token, _predicate()
-
-        if token == 'CONTR':
-            return token
-
-        args = []
-        while lexer.peek() != ')':
-            args.append(_predicate() if lexer.peek() == '(' else _symbol())
-        next(lexer)
-
-        return token, args
+        _expect_next(')')
+        return result
 
     def _indices():
         _expect_next('(')
@@ -248,7 +246,7 @@ def parse(lexer):
 
     def _rule():
         rule = next(lexer)
-        if rule not in {'RE'} | {x + y for x in 'CDINXAE' for y in 'IE'}:
+        if rule not in {'S', 'RE'} | {x + y for x in 'CDINXAE' for y in 'IE'}:
             raise ParseError
         return rule
 
