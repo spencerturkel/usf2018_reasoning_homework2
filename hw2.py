@@ -173,7 +173,7 @@ def parse(lexer):
             args = []
             while lexer.peek() != ')':
                 args.append(_predicate() if lexer.peek() == '(' else _symbol())
-            result = token, args
+            result = (token,) + tuple(args)
 
         _expect_next(')')
         return result
@@ -206,33 +206,72 @@ class InvalidProof(Exception):
     pass
 
 
+def symbols_of(predicate):
+    pass  # TODO
+
+
+def substitute(replacement_variable, quantifier_predicate):
+    pass  # TODO
+
+
+def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
+    proof_length = len(proof)
+
+    if proof_length == 4:
+        if isinstance(proof[1], str):  # existential constant
+            index, variable, predicate, cited_index = proof
+            symbols = seen_predicates | seen_functions | seen_objects
+
+            if index in facts_by_line or cited_index not in facts_by_line or variable in symbols:
+                raise InvalidProof
+
+            pred_syms, fun_syms, obj_syms = symbols_of(predicate)
+
+            if (pred_syms | fun_syms | obj_syms) - symbols \
+                    or substitute(variable, facts_by_line[cited_index]) != predicate:
+                raise InvalidProof
+
+            facts_by_line = facts_by_line.copy()
+            facts_by_line[index] = predicate
+            seen_predicates |= pred_syms
+            seen_functions |= fun_syms
+            seen_objects |= obj_syms
+
+            return facts_by_line, seen_predicates, seen_functions, seen_objects
+
+        else:  # proof line
+            index, predicate, cited_indices, rule = proof
+            # TODO
+
+    if proof_length == 2:
+        if isinstance(proof[1], str):  # universal constant
+            index, statement = proof
+            if statement in seen_predicates | seen_functions | seen_objects:
+                raise InvalidProof
+            return facts_by_line, seen_predicates, seen_functions, seen_objects | {statement}
+
+        else:  # sub-proof
+            index, sub_proof_list = proof
+            # TODO
+
+    raise InvalidProof
+
+
 def validate(top_level_proof):
     """
     Validates a top-level proof.
 
-    :param top_level_proof: a Proof.
-    Proof = Union[Tuple[int, List[Proof]],
-                  Tuple[int, Predicate, List[int], str],
-                  Tuple[int, str],
-                  Tuple[int, str, Predicate, int]]
-    Predicate = Union[Tuple['FORALL', str, Predicate],
-                      Tuple['EXISTS', str, Predicate],
-                      Tuple['AND', Predicate, Predicate],
-                      Tuple['OR', Predicate, Predicate],
-                      Tuple['IMPLIES', Predicate, Predicate],
-                      Tuple['NOT', Predicate],
-                      'CONTR',
-                      Tuple[str, List[Union[str, Predicate]]],
+    :param top_level_proof: a parsed Proof.
     :except InvalidProof: when the proof is valid
     """
     if len(top_level_proof) != 2 or isinstance(top_level_proof[1], str):
         raise InvalidProof
     top_level_line, _ = top_level_proof
 
-    def _validate_proof(proof, facts_by_line, predicates, functions_and_objects):
-        return facts_by_line, predicates, functions_and_objects
+    facts_by_line, _, _, _ = validate_proof(top_level_proof, dict(), set(), set(), set())
 
-    _validate_proof(top_level_proof, dict(), set(), set())
+    if top_level_line not in facts_by_line:
+        raise InvalidProof
 
 
 # noinspection PyPep8Naming

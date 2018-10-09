@@ -70,10 +70,10 @@ class TestParse:
         ((10, 'x'), ListLexer(['(', 10,
                                '(', 'UCONST', 'x', ')',
                                '(', '[', ']', 'UCONST', ')', ')'])),
-        ((10, 'x', ('P', []), 5), ListLexer(['(', 10,
+        ((10, 'x', ('P',), 5), ListLexer(['(', 10,
                                              '(', 'ECONST', 'x', '(', 'P', ')', ')',
                                              '(', '[', 5, ']', 'ECONST', ')', ')'])),
-        ((10, ('P', []), [], 'S'), ListLexer(['(', 10,
+        ((10, ('P',), [], 'S'), ListLexer(['(', 10,
                                               '(', 'P', ')',
                                               '(', '[', ']', 'S', ')', ')'])),
     ])
@@ -89,17 +89,17 @@ class TestParse:
         line_tokens = ['(', 10,
                        '(', 'P', ')',
                        '(', '[', ']', rule, ')', ')']
-        assert (10, ('P', []), [], rule) == parse(ListLexer(line_tokens))
+        assert (10, ('P',), [], rule) == parse(ListLexer(line_tokens))
 
     @staticmethod
     @pytest.mark.parametrize('predicate, tokens', [
-        (('FORALL', 'x', ('P', [])), ['FORALL', 'x', '(', 'P', ')']),
-        (('EXISTS', 'x', ('P', [])), ['EXISTS', 'x', '(', 'P', ')']),
-        (('AND', ('P', []), ('Q', [])), ['AND', '(', 'P', ')', '(', 'Q', ')']),
-        (('OR', ('P', []), ('Q', [])), ['OR', '(', 'P', ')', '(', 'Q', ')']),
-        (('IMPLIES', ('P', []), ('Q', [])), ['IMPLIES', '(', 'P', ')', '(', 'Q', ')']),
-        (('NOT', ('P', [])), ['NOT', '(', 'P', ')']),
-        (('P', ['x', ('Q', ['y']), 'z']), ['P', 'x', '(', 'Q', 'y', ')', 'z']),
+        (('FORALL', 'x', ('P',)), ['FORALL', 'x', '(', 'P', ')']),
+        (('EXISTS', 'x', ('P',)), ['EXISTS', 'x', '(', 'P', ')']),
+        (('AND', ('P',), ('Q',)), ['AND', '(', 'P', ')', '(', 'Q', ')']),
+        (('OR', ('P',), ('Q',)), ['OR', '(', 'P', ')', '(', 'Q', ')']),
+        (('IMPLIES', ('P',), ('Q',)), ['IMPLIES', '(', 'P', ')', '(', 'Q', ')']),
+        (('NOT', ('P',)), ['NOT', '(', 'P', ')']),
+        (('P', 'x', ('Q', 'y'), 'z'), ['P', 'x', '(', 'Q', 'y', ')', 'z']),
         ('CONTR', ['CONTR']),
     ])
     def test_predicates(predicate, tokens):
@@ -118,7 +118,7 @@ class TestParse:
                        '(', 'P', ')',
                        '(', '[', ']', 'S', ')', ')']
         assert (index, []) == parse(ListLexer(subproof_tokens))
-        assert (index, ('P', []), [], 'S') == parse(ListLexer(line_tokens))
+        assert (index, ('P',), [], 'S') == parse(ListLexer(line_tokens))
 
     @staticmethod
     @pytest.mark.parametrize('citations, tokens', [
@@ -130,16 +130,16 @@ class TestParse:
         line_tokens = ['(', 10,
                        '(', 'P', ')',
                        '(', '['] + tokens + [']', 'S', ')', ')']
-        assert (10, ('P', []), citations, 'S') == parse(ListLexer(line_tokens))
+        assert (10, ('P',), citations, 'S') == parse(ListLexer(line_tokens))
 
     @staticmethod
     @pytest.mark.parametrize('lines, tokens', [
         ([], []),
-        ([(10, ('P', []), [], 'S')], ['(', 10,
+        ([(10, ('P',), [], 'S')], ['(', 10,
                                       '(', 'P', ')',
                                       '(', '[', ']', 'S', ')', ')']),
-        ([(10, ('P', []), [], 'S'),
-          (20, ('Q', ['x']), [], 'S')], [
+        ([(10, ('P',), [], 'S'),
+          (20, ('Q', 'x'), [], 'S')], [
              '(', 10,
              '(', 'P', ')',
              '(', '[', ']', 'S', ')', ')',
@@ -153,13 +153,22 @@ class TestParse:
         assert (10, lines) == parse(ListLexer(line_tokens))
 
 
-class TestValidate:
+class TestValidateProof:
     @staticmethod
     @pytest.mark.parametrize(
-        'proof', [(10, 'x'),
-                  (10, 'CONTR', [], 'S'),
-                  (10, 'x', 'CONTR', 5), ]
+        'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
+            ((10, 'x'), dict(), set(), set(), set()),
+        ]
     )
-    def test_top_level_sub_proof(proof):
-        with pytest.raises(InvalidProof):
-            validate(proof)
+    def test_universal_constant(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
+        validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
+            ((10, 'x', 'CONTR', 5), {5: {('EXISTS', 'y', 'CONTR')}}, set(), set(), {'y'}),
+            ((10, 'x', ('P', ['x']), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
+        ]
+    )
+    def test_existential_constant(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
+        validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
