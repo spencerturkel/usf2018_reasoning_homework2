@@ -275,19 +275,33 @@ def instantiate(obj, quantifier_predicate, fresh):
     def substitute(obj, var, pred):
         if pred == 'CONTR':
             return pred
-        tag, *data = pred[0]
+        tag, *data = pred
         if tag in {'FORALL', 'EXISTS'}:
             quantified_variable, quantified_predicate = data
             if var == quantified_variable:
                 return pred
             if obj == quantified_variable:
-                pass
+                if obj not in symbols_of(quantified_predicate)[2]:
+                    return pred
+                fresh_variable = fresh()
+                quantified_predicate = substitute(fresh_variable, quantified_variable, quantified_predicate)
+                quantified_variable = fresh_variable
+            return tag, quantified_variable, substitute(obj, var, quantified_predicate)
         if tag in {'AND', 'OR', 'IMPLIES'}:
             first_arg, second_arg = data
+            return tag, substitute(obj, var, first_arg), substitute(obj, var, second_arg)
         if tag == 'NOT':
             arg, = data
-        args = data
-        pass
+            return tag, substitute(obj, var, arg)
+
+        result = [tag]
+        for arg in data:
+            if isinstance(arg, str):
+                result.append(obj if arg == var else arg)
+            else:
+                result.append(substitute(obj, var, arg))
+
+        return tuple(result)
 
     if isinstance(quantifier_predicate, str) or len(quantifier_predicate) != 3:
         raise InvalidProof

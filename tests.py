@@ -170,20 +170,30 @@ class TestInstantiate:
     @pytest.mark.parametrize('obj, quantifier_predicate, result', [
         ('a', ('FORALL', 'x', ('P', 'x')), ('P', 'a')),
         ('a', ('FORALL', 'a', ('P', 'a')), ('P', 'a')),
+        ('a',
+         ('FORALL', 'x', ('FORALL', 'a', ('FORALL', '_FRESH_1', ('P', 'a', '_FRESH_1')))),
+         ('FORALL', '_FRESH_1', ('FORALL', '_FRESH_2', ('P', '_FRESH_1', '_FRESH_2')))),
         ('y',
          ('FORALL', 'x', ('EXISTS', 'y', ('P', 'x', 'y'))),
-         ('EXISTS', 'y', '_FRESH')),
+         ('EXISTS', '_FRESH_1', ('P', 'y', '_FRESH_1'))),
         ('a',
          ('FORALL', 'x', ('AND', ('P', 'x'), ('EXISTS', 'a', ('P', 'a')))),
-         ('AND', ('P', 'a'), ('EXISTS', 'a', ('P', 'a')))),
+         ('AND', ('P', 'a'), ('EXISTS', '_FRESH_1', ('P', '_FRESH_1')))),
         ('a', ('EXISTS', 'x', ('P', 'x')), ('P', 'a')),
         ('a', ('EXISTS', 'a', ('P', 'a')), ('P', 'a')),
         ('a',
          ('EXISTS', 'x', ('AND', ('P', 'x'), ('FORALL', 'a', ('P', 'a')))),
-         ('AND', ('P', 'a'), ('FORALL', 'a', ('P', 'a')))),
+         ('AND', ('P', 'a'), ('FORALL', '_FRESH_1', ('P', '_FRESH_1')))),
     ])
     def test_good(obj, quantifier_predicate, result):
-        assert instantiate(obj, quantifier_predicate, lambda: '_FRESH') == result
+        fresh_count = 0
+
+        def fresh():
+            nonlocal fresh_count
+            fresh_count += 1
+            return '_FRESH_{}'.format(fresh_count)
+
+        assert instantiate(obj, quantifier_predicate, fresh) == result
 
     @staticmethod
     @pytest.mark.parametrize('obj, quantifier_predicate', [
