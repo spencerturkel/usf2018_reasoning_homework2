@@ -4,6 +4,7 @@ import pytest
 
 
 class TestLexer:
+    @staticmethod
     @pytest.mark.parametrize(['string', 'result'], [
         ('UCONST ECONST', ['UCONST', 'ECONST']),
         ('FORALL EXISTS CONTR AND OR IMPLIES NOT', ['FORALL', 'EXISTS', 'CONTR',
@@ -20,10 +21,11 @@ class TestLexer:
                                        ')', ')', '(', '[', ']', 'S', ')', ')']),
         (' [\t] \n\t  0   ab123', ['[', ']', 0, 'ab123'])
     ])
-    def test_listing(self, string, result):
+    def test_listing(string, result):
         assert list(Lexer(string)) == result
 
-    def test_peeking_and_nexting(self):
+    @staticmethod
+    def test_peeking_and_nexting():
         lexer = Lexer(' [\t] \t  0   Ab123')
         for token in ['[', ']', 0, 'Ab123']:
             assert lexer.peek() == token
@@ -35,7 +37,7 @@ class TestLexer:
 
 class ListLexer:
     """
-    An iterable returning values from a list, and allowing a .peek() operation.
+    An iterable returning user-supplied values in order, and allowing a .peek() operation.
     """
 
     def __init__(self, values):
@@ -55,10 +57,10 @@ class ListLexer:
 
 
 def test_list_lexer():
-    l = ListLexer([1, 2, 3])
-    assert 1 == l.peek()
-    assert next(l) == 1
-    assert 2 == l.peek()
+    lexer = ListLexer([1, 2, 3])
+    assert 1 == lexer.peek()
+    assert next(lexer) == 1
+    assert 2 == lexer.peek()
 
 
 class TestParse:
@@ -149,3 +151,15 @@ class TestParse:
     def test_sub_proofs(lines, tokens):
         line_tokens = ['(', 'SUBP', 10] + tokens + [')']
         assert (10, lines) == parse(ListLexer(line_tokens))
+
+
+class TestValidate:
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof', [(10, 'x'),
+                  (10, 'CONTR', [], 'S'),
+                  (10, 'x', 'CONTR', 5), ]
+    )
+    def test_top_level_sub_proof(proof):
+        with pytest.raises(InvalidProof):
+            validate(proof)
