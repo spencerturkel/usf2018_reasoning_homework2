@@ -165,36 +165,66 @@ def test_symbols_of(symbols, predicate):
     assert symbols == symbols_of(predicate)
 
 
-class TestValidateProof:
+class TestInstantiate:
     @staticmethod
-    @pytest.mark.parametrize(
-        'proof, seen_predicates, seen_functions, seen_objects', [
-            ((10, 'x'), set(), set(), set()),
-            ((10, 'x'), {'P', 'Q'}, {'f', 'g'}, {'y', 'z'}),
-        ]
-    )
-    def test_good_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
-        validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
+    @pytest.mark.parametrize('obj, quantifier_predicate, result', [
+        ('a', (10, ('FORALL', 'x', ('P', 'x')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+        ('a', (10, ('FORALL', 'a', ('P', 'a')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+        ('a',
+         (10, ('FORALL', 'x', ('AND', ('P', 'x'), ('EXISTS', 'a', ('P', 'a')))), [], 'S'),
+         (10, ('AND', ('P', 'a'), ('EXISTS', 'a', ('P', 'a'))), [], 'S')),
+        ('a', (10, ('EXISTS', 'x', ('P', 'x')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+        ('a', (10, ('EXISTS', 'a', ('P', 'a')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+        ('a',
+         (10, ('EXISTS', 'x', ('AND', ('P', 'x'), ('FORALL', 'a', ('P', 'a')))), [], 'S'),
+         (10, ('AND', ('P', 'a'), ('FORALL', 'a', ('P', 'a'))), [], 'S')),
+    ])
+    def test_good(obj, quantifier_predicate, result):
+        assert instantiate(obj, quantifier_predicate) == result
 
     @staticmethod
-    @pytest.mark.parametrize(
-        'proof, seen_predicates, seen_functions, seen_objects', [
-            ((10, 'x'), {'x'}, set(), set()),
-            ((10, 'x'), set(), {'x'}, set()),
-            ((10, 'x'), set(), set(), {'x'}),
-        ]
-    )
-    def test_bad_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
+    @pytest.mark.parametrize('obj, quantifier_predicate', [
+        ('a', (10, ('P', 'x'), [], 'S')),
+        ('a', (10, 'x')),
+        ('a', (10, [])),
+    ])
+    def test_bad(obj, quantifier_predicate):
         with pytest.raises(InvalidProof):
+            instantiate(obj, quantifier_predicate)
+
+
+class TestValidateProof:
+    class TestUniversalConstant:
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'x'), set(), set(), set()),
+                ((10, 'x'), {'P', 'Q'}, {'f', 'g'}, {'y', 'z'}),
+            ]
+        )
+        def test_good_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
             validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
 
-    @staticmethod
-    @pytest.mark.parametrize(
-        'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
-            ((10, 'x', 'CONTR', 5), {5: {('EXISTS', 'y', 'CONTR')}}, set(), set(), {'y'}),
-            ((10, 'x', ('P', 'x'), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
-        ]
-    )
-    @pytest.mark.skip
-    def test_existential_constant(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
-        validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'x'), {'x'}, set(), set()),
+                ((10, 'x'), set(), {'x'}, set()),
+                ((10, 'x'), set(), set(), {'x'}),
+            ]
+        )
+        def test_bad_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
+
+    class TestExistentialConstant:
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'x', 'CONTR', 5), {5: {('EXISTS', 'y', 'CONTR')}}, set(), set(), {'y'}),
+                ((10, 'x', ('P', 'x'), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
+            ]
+        )
+        @pytest.mark.skip
+        def test_good(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
+            validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)

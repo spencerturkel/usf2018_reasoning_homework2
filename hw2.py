@@ -264,7 +264,7 @@ def symbols_of(predicate):
     return predicates, functions, objects
 
 
-def substitute(replacement_variable, quantifier_predicate):
+def instantiate(obj, quantifier_predicate):
     pass  # TODO
 
 
@@ -274,15 +274,15 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
     if proof_length == 4:
         if isinstance(proof[1], str):  # existential constant
             index, variable, predicate, cited_index = proof
-            symbols = seen_predicates | seen_functions | seen_objects
+            seen_symbols = seen_predicates | seen_functions | seen_objects
 
-            if index in facts_by_line or cited_index not in facts_by_line or variable in symbols:
+            if index in facts_by_line or cited_index not in facts_by_line or variable in seen_symbols:
                 raise InvalidProof
 
             pred_syms, fun_syms, obj_syms = symbols_of(predicate)
 
-            if (pred_syms | fun_syms | obj_syms) - symbols \
-                    or substitute(variable, facts_by_line[cited_index]) != predicate:
+            if (pred_syms | fun_syms | obj_syms) - seen_symbols \
+                    or instantiate(variable, facts_by_line[cited_index]) != predicate:
                 raise InvalidProof
 
             facts_by_line = facts_by_line.copy()
