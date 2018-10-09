@@ -168,29 +168,34 @@ def test_symbols_of(symbols, predicate):
 class TestInstantiate:
     @staticmethod
     @pytest.mark.parametrize('obj, quantifier_predicate, result', [
-        ('a', (10, ('FORALL', 'x', ('P', 'x')), [], 'S'), (10, ('P', 'a'), [], 'S')),
-        ('a', (10, ('FORALL', 'a', ('P', 'a')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+        ('a', ('FORALL', 'x', ('P', 'x')), ('P', 'a')),
+        ('a', ('FORALL', 'a', ('P', 'a')), ('P', 'a')),
+        ('y',
+         ('FORALL', 'x', ('EXISTS', 'y', ('P', 'x', 'y'))),
+         ('EXISTS', 'y', '_FRESH')),
         ('a',
-         (10, ('FORALL', 'x', ('AND', ('P', 'x'), ('EXISTS', 'a', ('P', 'a')))), [], 'S'),
-         (10, ('AND', ('P', 'a'), ('EXISTS', 'a', ('P', 'a'))), [], 'S')),
-        ('a', (10, ('EXISTS', 'x', ('P', 'x')), [], 'S'), (10, ('P', 'a'), [], 'S')),
-        ('a', (10, ('EXISTS', 'a', ('P', 'a')), [], 'S'), (10, ('P', 'a'), [], 'S')),
+         ('FORALL', 'x', ('AND', ('P', 'x'), ('EXISTS', 'a', ('P', 'a')))),
+         ('AND', ('P', 'a'), ('EXISTS', 'a', ('P', 'a')))),
+        ('a', ('EXISTS', 'x', ('P', 'x')), ('P', 'a')),
+        ('a', ('EXISTS', 'a', ('P', 'a')), ('P', 'a')),
         ('a',
-         (10, ('EXISTS', 'x', ('AND', ('P', 'x'), ('FORALL', 'a', ('P', 'a')))), [], 'S'),
-         (10, ('AND', ('P', 'a'), ('FORALL', 'a', ('P', 'a'))), [], 'S')),
+         ('EXISTS', 'x', ('AND', ('P', 'x'), ('FORALL', 'a', ('P', 'a')))),
+         ('AND', ('P', 'a'), ('FORALL', 'a', ('P', 'a')))),
     ])
     def test_good(obj, quantifier_predicate, result):
-        assert instantiate(obj, quantifier_predicate) == result
+        assert instantiate(obj, quantifier_predicate, lambda: '_FRESH') == result
 
     @staticmethod
     @pytest.mark.parametrize('obj, quantifier_predicate', [
-        ('a', (10, ('P', 'x'), [], 'S')),
-        ('a', (10, 'x')),
-        ('a', (10, [])),
+        ('a', ('P', 'x')),
+        ('a', 'x'),
+        ('a', (SubProofKind.conditional, set(), {('FORALL', 'x', ('P', 'x'))})),
+        ('a', (SubProofKind.universal, 'y', {('FORALL', 'x', ('P', 'x'))})),
+        ('a', (SubProofKind.existential, 'y', {('FORALL', 'x', ('P', 'x'))})),
     ])
     def test_bad(obj, quantifier_predicate):
         with pytest.raises(InvalidProof):
-            instantiate(obj, quantifier_predicate)
+            instantiate(obj, quantifier_predicate, lambda: '_FRESH')
 
 
 class TestValidateProof:
@@ -217,6 +222,7 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
 
+    @pytest.mark.skip
     class TestExistentialConstant:
         @staticmethod
         @pytest.mark.parametrize(
@@ -225,6 +231,5 @@ class TestValidateProof:
                 ((10, 'x', ('P', 'x'), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
             ]
         )
-        @pytest.mark.skip
         def test_good(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
             validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)

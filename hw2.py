@@ -264,8 +264,37 @@ def symbols_of(predicate):
     return predicates, functions, objects
 
 
-def instantiate(obj, quantifier_predicate):
-    pass  # TODO
+@unique
+class SubProofKind(Enum):
+    conditional = 10
+    universal = 20
+    existential = 30
+
+
+def instantiate(obj, quantifier_predicate, fresh):
+    def substitute(obj, var, pred):
+        if pred == 'CONTR':
+            return pred
+        tag, *data = pred[0]
+        if tag in {'FORALL', 'EXISTS'}:
+            quantified_variable, quantified_predicate = data
+            if var == quantified_variable:
+                return pred
+            if obj == quantified_variable:
+                pass
+        if tag in {'AND', 'OR', 'IMPLIES'}:
+            first_arg, second_arg = data
+        if tag == 'NOT':
+            arg, = data
+        args = data
+        pass
+
+    if isinstance(quantifier_predicate, str) or len(quantifier_predicate) != 3:
+        raise InvalidProof
+    quantifier, variable, predicate = quantifier_predicate
+    if quantifier not in {'FORALL', 'EXISTS'}:
+        raise InvalidProof
+    return substitute(obj, variable, predicate)
 
 
 def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
