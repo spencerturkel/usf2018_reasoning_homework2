@@ -88,7 +88,7 @@ def parse(lexer):
                       Tuple['IMPLIES', Predicate, Predicate],
                       Tuple['NOT', Predicate],
                       'CONTR',
-                      Tuple[str, List[Union[str, Predicate]]],
+                      Tuple[str, Union[str, Predicate]*]
     :except ParseError: when the proof cannot be parsed.
     """
 
@@ -207,7 +207,61 @@ class InvalidProof(Exception):
 
 
 def symbols_of(predicate):
-    pass  # TODO
+    """
+    :param predicate: the predicate to scan
+    :return: the set of predicates, the set of functions, and the set of object
+    """
+    predicates = set()
+    functions = set()
+    objects = set()
+
+    def _function(pred):
+        if pred == 'CONTR':
+            return
+        tag = pred[0]
+        if tag in ['FORALL', 'EXISTS']:
+            objects.add(pred[1])
+            _predicate(pred[2])
+            return
+        if tag in ['AND', 'OR', 'IMPLIES']:
+            _predicate(pred[1])
+            _predicate(pred[2])
+            return
+        if tag == 'NOT':
+            _predicate(pred[1])
+            return
+        if pred not in predicates:
+            functions.add(tag)
+        for arg in pred[1:]:
+            if isinstance(arg, str):
+                objects.add(arg)
+                continue
+            _function(arg)
+
+    def _predicate(pred):
+        if pred == 'CONTR':
+            return
+        tag = pred[0]
+        if tag in ['FORALL', 'EXISTS']:
+            objects.add(pred[1])
+            _predicate(pred[2])
+            return
+        if tag in ['AND', 'OR', 'IMPLIES']:
+            _predicate(pred[1])
+            _predicate(pred[2])
+            return
+        if tag == 'NOT':
+            _predicate(pred[1])
+            return
+        predicates.add(tag)
+        for arg in pred[1:]:
+            if isinstance(arg, str):
+                objects.add(arg)
+                continue
+            _function(arg)
+
+    _predicate(predicate)
+    return predicates, functions, objects
 
 
 def substitute(replacement_variable, quantifier_predicate):

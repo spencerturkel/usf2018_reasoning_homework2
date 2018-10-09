@@ -71,11 +71,11 @@ class TestParse:
                                '(', 'UCONST', 'x', ')',
                                '(', '[', ']', 'UCONST', ')', ')'])),
         ((10, 'x', ('P',), 5), ListLexer(['(', 10,
-                                             '(', 'ECONST', 'x', '(', 'P', ')', ')',
-                                             '(', '[', 5, ']', 'ECONST', ')', ')'])),
+                                          '(', 'ECONST', 'x', '(', 'P', ')', ')',
+                                          '(', '[', 5, ']', 'ECONST', ')', ')'])),
         ((10, ('P',), [], 'S'), ListLexer(['(', 10,
-                                              '(', 'P', ')',
-                                              '(', '[', ']', 'S', ')', ')'])),
+                                           '(', 'P', ')',
+                                           '(', '[', ']', 'S', ')', ')'])),
     ])
     def test_special_lines(ast, lexer):
         assert ast == parse(lexer)
@@ -136,8 +136,8 @@ class TestParse:
     @pytest.mark.parametrize('lines, tokens', [
         ([], []),
         ([(10, ('P',), [], 'S')], ['(', 10,
-                                      '(', 'P', ')',
-                                      '(', '[', ']', 'S', ')', ')']),
+                                   '(', 'P', ')',
+                                   '(', '[', ']', 'S', ')', ')']),
         ([(10, ('P',), [], 'S'),
           (20, ('Q', 'x'), [], 'S')], [
              '(', 10,
@@ -153,22 +153,48 @@ class TestParse:
         assert (10, lines) == parse(ListLexer(line_tokens))
 
 
+@pytest.mark.parametrize('symbols, predicate', [
+    (({'P'}, set(), set()), ('P',)),
+    (({'P'}, set(), {'x', 'y'}), ('P', 'x', 'y')),
+    (({'P'}, {'f'}, {'x'}), ('P', ('f', 'x'))),
+    (({'P', 'Q'}, {'f', 'g'}, {'x', 'y'}), ('AND', ('P', ('f', 'x', 'y')), ('Q', ('g', 'x')))),
+    (({'P', 'Q'}, {'f'}, {'y'}), ('NOT', ('P', ('f', ('NOT', ('Q',)), 'y')))),
+    (({'P', 'Q'}, set(), {'y'}), ('NOT', ('P', ('NOT', ('Q',)), 'y'))),
+])
+def test_symbols_of(symbols, predicate):
+    assert symbols == symbols_of(predicate)
+
+
 class TestValidateProof:
     @staticmethod
     @pytest.mark.parametrize(
-        'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
-            ((10, 'x'), dict(), set(), set(), set()),
+        'proof, seen_predicates, seen_functions, seen_objects', [
+            ((10, 'x'), set(), set(), set()),
+            ((10, 'x'), {'P', 'Q'}, {'f', 'g'}, {'y', 'z'}),
         ]
     )
-    def test_universal_constant(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
-        validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
+    def test_good_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
+        validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof, seen_predicates, seen_functions, seen_objects', [
+            ((10, 'x'), {'x'}, set(), set()),
+            ((10, 'x'), set(), {'x'}, set()),
+            ((10, 'x'), set(), set(), {'x'}),
+        ]
+    )
+    def test_bad_universal_constant(proof, seen_predicates, seen_functions, seen_objects):
+        with pytest.raises(InvalidProof):
+            validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
 
     @staticmethod
     @pytest.mark.parametrize(
         'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
             ((10, 'x', 'CONTR', 5), {5: {('EXISTS', 'y', 'CONTR')}}, set(), set(), {'y'}),
-            ((10, 'x', ('P', ['x']), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
+            ((10, 'x', ('P', 'x'), 5), {5: {('EXISTS', 'y', ('P', 'y'))}}, {'P'}, set(), {'y'}),
         ]
     )
+    @pytest.mark.skip
     def test_existential_constant(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
         validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
