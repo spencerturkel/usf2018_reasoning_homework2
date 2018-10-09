@@ -322,14 +322,14 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             if index in facts_by_line or cited_index not in facts_by_line or variable in seen_symbols:
                 raise InvalidProof
 
-            pred_syms, fun_syms, obj_syms = symbols_of(predicate)
-
-            if (pred_syms | fun_syms | obj_syms) - seen_symbols \
-                    or instantiate(variable, facts_by_line[cited_index]) != predicate:
+            instantiation = instantiate(variable, facts_by_line[cited_index], lambda: None)
+            if instantiation != predicate:
                 raise InvalidProof
 
             facts_by_line = facts_by_line.copy()
             facts_by_line[index] = predicate
+
+            pred_syms, fun_syms, obj_syms = symbols_of(instantiation)
             seen_predicates |= pred_syms
             seen_functions |= fun_syms
             seen_objects |= obj_syms
