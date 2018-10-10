@@ -435,12 +435,30 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             if rule == 'II':
                 if len(cited_indices) != 1:
                     raise InvalidProof
+
                 [sub_proof] = citations
+
                 if len(sub_proof) != 3:
                     raise InvalidProof
-                kind, conditions, sub_fact = sub_proof
+
+                kind, conditions, sub_consequents = sub_proof
+
+                if kind != SubProofKind.conditional \
+                        or len(conditions) != 1:
+                    raise InvalidProof
+
+                [condition] = conditions
                 tag, antecedent, consequent = predicate
-                pass
+
+                if tag != 'IMPLIES' \
+                        or condition != antecedent \
+                        or consequent not in sub_consequents:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+
+                return facts, seen_predicates, seen_functions, seen_objects
 
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant

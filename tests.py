@@ -450,6 +450,14 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, {('P',), ('S',)}, {('R',)}),
+                  30: (SubProofKind.conditional, {('Q',)}, {('R',)}),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, {('P',)}, {('R',)}),
+                  30: (SubProofKind.conditional, {('Q',), ('S',)}, {('R',)}),
+                  40: ('OR', ('P',), ('Q',))}),
                 ((50, ('S',), [20, 30, 40], 'DE'),
                  {20: (SubProofKind.conditional, {('P',)}, {('R',)}),
                   30: (SubProofKind.conditional, {('Q',)}, {('R',)}),
@@ -501,16 +509,17 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, facts_by_index, set(), set(), set())
 
-    @pytest.mark.skip
     class TestImplicationIntroduction:
 
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
                 ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
-                 {20: (SubProofKind.conditional, {('P',)}, ('Q',))}),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q',)})}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q',), ('R',)})}),
                 ((50, ('IMPLIES', ('P', 'x'), ('Q', 'y')), [20], 'II'),
-                 {20: (SubProofKind.conditional, {('P', 'x')}, ('Q', 'y'))}),
+                 {20: (SubProofKind.conditional, {('P', 'x')}, {('Q', 'y')})}),
             ])
         def test_good(proof, facts_by_index):
             index, predicate, *_ = proof
@@ -524,15 +533,19 @@ class TestValidateProof:
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
                 ((50, ('AND', ('P',), ('Q',)), [20], 'II'),
-                 {20: (SubProofKind.conditional, {('P',)}, ('Q',))}),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q',)})}),
                 ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
-                 {20: (SubProofKind.conditional, {('P', 'x')}, ('Q',))}),
+                 {20: (SubProofKind.conditional, {('P',), ('R',)}, {('Q',)})}),
                 ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
-                 {20: (SubProofKind.conditional, {('P',)}, ('Q', 'x'))}),
+                 {20: (SubProofKind.universal, {('P',)}, {('Q',)})}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, {('P', 'x')}, {('Q',)})}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q', 'x')})}),
                 ((50, ('IMPLIES', ('P',), ('Q',)), [], 'II'),
-                 {20: (SubProofKind.conditional, {('P',)}, ('Q', 'x'))}),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q', 'x')})}),
                 ((50, ('IMPLIES', ('P',), ('Q',)), [20, 20], 'II'),
-                 {20: (SubProofKind.conditional, {('P',)}, ('Q', 'x'))}),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q', 'x')})}),
             ])
         def test_bad(proof, facts_by_index):
             with pytest.raises(InvalidProof):
