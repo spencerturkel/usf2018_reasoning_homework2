@@ -308,9 +308,36 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
 
-    @pytest.mark.skip
     class TestConjunctionElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('P',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
+                 {'P', 'Q'}, set(), set()),
+                ((50, ('Q',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
+                 {'P', 'Q'}, set(), set()),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != proof[0]}
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('P',), [], 'CE'), dict(), {'P', 'Q'}, set(), set()),
+                ((50, ('P',), [40, 40], 'CE'), {40: ('AND', ('P',), ('Q',))},
+                 {'P', 'Q'}, set(), set()),
+                ((50, ('R',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
+                 {'P', 'Q', 'R'}, set(), set()),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestDisjunctionIntroduction:

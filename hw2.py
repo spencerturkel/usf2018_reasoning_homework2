@@ -360,6 +360,20 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = predicate
 
                 return facts, seen_predicates, seen_functions, seen_objects
+
+            if rule == 'CE':
+                if len(cited_indices) != 1:
+                    raise InvalidProof
+
+                [(_, *conjuncts)] = citations
+
+                if predicate not in conjuncts:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+
+                return facts, seen_predicates, seen_functions, seen_objects
             # TODO
 
     if proof_length == 2:
