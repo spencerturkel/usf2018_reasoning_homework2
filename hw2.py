@@ -365,9 +365,9 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 if len(cited_indices) != 1:
                     raise InvalidProof
 
-                [(_, *conjuncts)] = citations
+                [(tag, *disjuncts)] = citations
 
-                if predicate not in conjuncts:
+                if tag != 'AND' or predicate not in disjuncts:
                     raise InvalidProof
 
                 facts = facts_by_line.copy()
@@ -387,6 +387,36 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 [cited_proof] = citations
 
                 if cited_proof != first_arg and cited_proof != second_arg:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+
+                return facts, seen_predicates, seen_functions, seen_objects
+
+            if rule == 'DE':
+                disjuncts = None
+                antecedents = set()
+                consequents = set()
+
+                for cited_proof in citations:
+                    if len(cited_proof) != 3:
+                        raise InvalidProof
+                    tag, *rest = cited_proof
+
+                    if tag == SubProofKind.conditional:
+                        antecedents.add(rest[0])
+                        consequents.add(rest[1])
+                        continue
+
+                    if tag != 'OR':
+                        raise InvalidProof
+
+                    disjuncts = set(rest)
+
+                if not disjuncts \
+                        or disjuncts != antecedents \
+                        or len(consequents) != 1:
                     raise InvalidProof
 
                 facts = facts_by_line.copy()

@@ -352,6 +352,8 @@ class TestValidateProof:
                  {'P', 'Q'}, set(), set()),
                 ((50, ('R',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
                  {'P', 'Q', 'R'}, set(), set()),
+                ((50, ('P',), [40], 'CE'), {40: ('OR', ('P',), ('Q',))},
+                 {'P', 'Q'}, set(), set()),
             ])
         def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
@@ -461,7 +463,7 @@ class TestValidateProof:
                   30: (SubProofKind.conditional, ('Q',), ('R',)),
                   40: ('OR', ('P',), ('Q',))}),
                 ((50, ('R',), [20, 30, 40], 'DE'),
-                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                 {20: (SubProofKind.universal, ('P',), ('R',)),
                   30: (SubProofKind.conditional, ('Q',), ('R',)),
                   40: ('OR', ('P',), ('Q',))}),
                 ((50, ('R',), [20, 30, 40], 'DE'),
