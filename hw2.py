@@ -593,6 +593,19 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             seen_objects = seen_objects | obj_syms
             return facts, seen_predicates, seen_functions, seen_objects
 
+        if rule == 'RE':
+            if len(cited_indices) != 1:
+                raise InvalidProof
+
+            [cited_proof] = citations
+
+            if cited_proof != predicate:
+                raise InvalidProof
+
+            facts = facts_by_line.copy()
+            facts[index] = predicate
+            return facts, seen_predicates, seen_functions, seen_objects
+
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof

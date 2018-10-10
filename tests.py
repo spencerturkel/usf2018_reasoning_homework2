@@ -824,9 +824,40 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                predicates, functions, objects)
 
-    @pytest.mark.skip
     class TestReiteration:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [20], 'RE'),
+                 {20: 'CONTR'}),
+                ((50, ('P', 'x'), [20], 'RE'),
+                 {20: ('P', 'x')}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [], 'RE'),
+                 {20: 'CONTR'}),
+                ((50, 'CONTR', [20, 20], 'RE'),
+                 {20: 'CONTR'}),
+                ((50, ('Q', 'x'), [20], 'RE'),
+                 {20: ('P', 'x')}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestArbitrarySubProof:
