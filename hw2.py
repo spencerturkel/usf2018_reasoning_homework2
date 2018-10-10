@@ -416,13 +416,20 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
                 if not disjuncts \
                         or disjuncts != antecedents \
-                        or len(consequents) != 1:
+                        or len(cited_indices) != len(antecedents) + 1 \
+                        or consequents != {predicate}:
                     raise InvalidProof
 
                 facts = facts_by_line.copy()
                 facts[index] = predicate
 
                 return facts, seen_predicates, seen_functions, seen_objects
+
+            if rule == 'II':
+                if len(cited_indices) != 1:
+                    raise InvalidProof
+                tag, antecedent, consequent = predicate
+                pass
 
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant

@@ -446,6 +446,10 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
+                ((50, ('S',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
                 ((50, ('R',), [20, 30, 40], 'DE'),
                  {20: (SubProofKind.conditional, ('P',), ('S',)),
                   30: (SubProofKind.conditional, ('Q',), ('R',)),
@@ -484,6 +488,10 @@ class TestValidateProof:
                   40: ('OR', ('P',), ('Q',))}),
                 ((50, ('P',), [30], 'DE'),
                  {30: ('OR', ('P',), ('P',))}),
+                ((50, ('R',), [20, 30, 40, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
             ])
         def test_bad(proof, facts_by_index):
             with pytest.raises(InvalidProof):
@@ -491,7 +499,38 @@ class TestValidateProof:
 
     @pytest.mark.skip
     class TestImplicationIntroduction:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, ('P',), ('Q',))}),
+                ((50, ('IMPLIES', ('P', 'x'), ('Q', 'y')), [20], 'II'),
+                 {20: (SubProofKind.conditional, ('P', 'x'), ('Q', 'y'))}),
+            ])
+        def test_good(proof, facts_by_index):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       set(), set(), set())
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds == funcs == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, ('P', 'x'), ('Q',))}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20], 'II'),
+                 {20: (SubProofKind.conditional, ('P',), ('Q', 'x'))}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [], 'II'),
+                 {20: (SubProofKind.conditional, ('P',), ('Q', 'x'))}),
+                ((50, ('IMPLIES', ('P',), ('Q',)), [20, 20], 'II'),
+                 {20: (SubProofKind.conditional, ('P',), ('Q', 'x'))}),
+            ])
+        def test_bad(proof, facts_by_index):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, set(), set(), set())
 
     @pytest.mark.skip
     class TestImplicationElimination:
