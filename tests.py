@@ -680,9 +680,57 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                seen_predicates, seen_functions, seen_objects)
 
-    @pytest.mark.skip
     class TestContradictionIntroduction:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [20, 30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20, 30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, ('P', 'x'), [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, ('NOT', ('P', 'x')), [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('NOT', ('P', 'x'))}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestContradictionElimination:

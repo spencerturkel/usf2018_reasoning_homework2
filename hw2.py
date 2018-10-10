@@ -315,7 +315,7 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
     proof_length = len(proof)
 
     if proof_length == 4:
-        if isinstance(proof[1], str):  # existential constant
+        if isinstance(proof[1], str) and not isinstance(proof[2], list):  # existential constant
             index, variable, predicate, cited_index = proof
             seen_symbols = seen_predicates | seen_functions | seen_objects
 
@@ -504,7 +504,7 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 kind, conditions, sub_facts = cited_proof
 
                 if kind != SubProofKind.conditional \
-                        or len(conditions) != 1\
+                        or len(conditions) != 1 \
                         or 'CONTR' not in sub_facts:
                     raise InvalidProof
 
@@ -531,6 +531,20 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 if len(inner_negation) != 2 \
                         or inner_negation[0] != 'NOT' \
                         or inner_negation[1] != predicate:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects
+
+            if rule == 'XI':
+                if len(cited_indices) != 2 or predicate != 'CONTR':
+                    raise InvalidProof
+
+                [first_citation, second_citation] = citations
+
+                if first_citation != ('NOT', second_citation) \
+                    and second_citation != ('NOT', first_citation):
                     raise InvalidProof
 
                 facts = facts_by_line.copy()
