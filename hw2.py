@@ -516,6 +516,27 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = predicate
                 return facts, seen_predicates, seen_functions, seen_objects
 
+            if rule == 'NE':
+                if len(cited_indices) != 1:
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                if len(cited_proof) != 2 \
+                        or cited_proof[0] != 'NOT':
+                    raise InvalidProof
+
+                inner_negation = cited_proof[1]
+
+                if len(inner_negation) != 2 \
+                        or inner_negation[0] != 'NOT' \
+                        or inner_negation[1] != predicate:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects
+
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof

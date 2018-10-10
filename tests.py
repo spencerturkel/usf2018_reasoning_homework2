@@ -272,20 +272,32 @@ class TestValidateProof:
                 validate_proof(proof, {5: ('EXISTS', 'y', ('P', 'y'))},
                                seen_predicates, seen_functions, seen_objects)
 
+    @staticmethod
+    @pytest.fixture
+    def seen_predicates():
+        return {('P', 'x'), ('Q',)}
+
+    @staticmethod
+    @pytest.fixture
+    def seen_functions():
+        return {'f', 'g'}
+
+    @staticmethod
+    @pytest.fixture
+    def seen_objects():
+        return {'a', 'b', 'x', 'y'}
+
     class TestConjunctionIntroduction:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+            'proof, facts_by_index', [
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30, 40], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
                 ((50, ('AND', ('P',), ('Q',)), [40, 30], 'CI'),
-                 {30: ('P',), 40: ('Q',)},
-                 {'P', 'Q'}, set(), set()),
+                 {30: ('P',), 40: ('Q',)}),
                 ((50, ('AND', ('P',), ('P',)), [30], 'CI'),
-                 {30: ('P',)},
-                 {'P', 'Q'}, set(), set()),
+                 {30: ('P',)}),
             ])
         def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
@@ -299,26 +311,21 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+            'proof, facts_by_index', [
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30, 40], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30], 'CI'),
-                 {30: ('P', ('f', 'x'))}, {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x'))}),
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [40], 'CI'),
-                 {40: ('Q', 'y')}, {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('Q', 'y')}),
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30, 40, 40], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
                 ((50, ('AND', ('P', ('f', 'x')), ('Q',)), [30, 40], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
                 ((50, ('AND', ('P',), ('Q', 'y')), [30, 40], 'CI'),
-                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')}),
             ])
         def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
@@ -328,11 +335,9 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
-                ((50, ('P',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
-                 {'P', 'Q'}, set(), set()),
-                ((50, ('Q',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
-                 {'P', 'Q'}, set(), set()),
+            'proof, facts_by_index', [
+                ((50, ('P',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))}),
+                ((50, ('Q',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))}),
             ])
         def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
@@ -346,14 +351,11 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
-                ((50, ('P',), [], 'CE'), dict(), {'P', 'Q'}, set(), set()),
-                ((50, ('P',), [40, 40], 'CE'), {40: ('AND', ('P',), ('Q',))},
-                 {'P', 'Q'}, set(), set()),
-                ((50, ('R',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))},
-                 {'P', 'Q', 'R'}, set(), set()),
-                ((50, ('P',), [40], 'CE'), {40: ('OR', ('P',), ('Q',))},
-                 {'P', 'Q'}, set(), set()),
+            'proof, facts_by_index', [
+                ((50, ('P',), [], 'CE'), dict()),
+                ((50, ('P',), [40, 40], 'CE'), {40: ('AND', ('P',), ('Q',))}),
+                ((50, ('R',), [40], 'CE'), {40: ('AND', ('P',), ('Q',))}),
+                ((50, ('P',), [40], 'CE'), {40: ('OR', ('P',), ('Q',))}),
             ])
         def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
@@ -363,13 +365,11 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+            'proof, facts_by_index', [
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
-                 {40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('Q', 'y')}),
             ])
         def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
@@ -383,28 +383,21 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+            'proof, facts_by_index', [
                 ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P'}, {'f'}, {'x', 'y'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, set(), {'x', 'y'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40, 30], 'DI'),
-                 {40: ('P', ('f', 'x')), 30: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('P', ('f', 'x')), 30: ('Q', 'y')}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('P', ('f', 'x'))}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q',)), [40], 'DI'),
-                 {40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                 {40: ('Q', 'y')}),
             ])
         def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
@@ -439,13 +432,17 @@ class TestValidateProof:
                  {20: (SubProofKind.conditional, {('P',)}, {('R',)}),
                   30: ('OR', ('P',), ('P',))}),
             ])
-        def test_good(proof, facts_by_index):
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
             facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
-                                                       set(), set(), set())
+                                                       seen_predicates,
+                                                       seen_functions,
+                                                       seen_objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
-            assert set() == preds == funcs == objs
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -505,9 +502,10 @@ class TestValidateProof:
                   30: (SubProofKind.conditional, {('Q',)}, {('R',)}),
                   40: ('OR', ('P',), ('Q',))}),
             ])
-        def test_bad(proof, facts_by_index):
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index, set(), set(), set())
+                validate_proof(proof, facts_by_index, seen_predicates,
+                               seen_functions, seen_objects)
 
     class TestImplicationIntroduction:
 
@@ -521,13 +519,17 @@ class TestValidateProof:
                 ((50, ('IMPLIES', ('P', 'x'), ('Q', 'y')), [20], 'II'),
                  {20: (SubProofKind.conditional, {('P', 'x')}, {('Q', 'y')})}),
             ])
-        def test_good(proof, facts_by_index):
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
             facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
-                                                       set(), set(), set())
+                                                       seen_predicates,
+                                                       seen_functions,
+                                                       seen_objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
-            assert set() == preds == funcs == objs
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -547,9 +549,10 @@ class TestValidateProof:
                 ((50, ('IMPLIES', ('P',), ('Q',)), [20, 20], 'II'),
                  {20: (SubProofKind.conditional, {('P',)}, {('Q', 'x')})}),
             ])
-        def test_bad(proof, facts_by_index):
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index, set(), set(), set())
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     class TestImplicationElimination:
 
@@ -563,13 +566,15 @@ class TestValidateProof:
                  {20: ('IMPLIES', ('P', 'x'), ('Q',)),
                   30: ('P', 'x')}),
             ])
-        def test_good(proof, facts_by_index):
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
             facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
-                                                       set(), set(), set())
+                                                       seen_predicates, seen_functions, seen_objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
-            assert set() == preds == funcs == objs
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -590,9 +595,10 @@ class TestValidateProof:
                  {20: ('IMPLIES', ('P',), ('Q',)),
                   30: ('P', 'x')}),
             ])
-        def test_bad(proof, facts_by_index):
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index, set(), set(), set())
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     class TestNegationIntroduction:
 
@@ -604,13 +610,15 @@ class TestValidateProof:
                 ((50, ('NOT', ('P',)), [20], 'NI'),
                  {20: (SubProofKind.conditional, {('P',)}, {'CONTR', ('Q',)})}),
             ])
-        def test_good(proof, facts_by_index):
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             index, predicate, *_ = proof
             facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
-                                                       set(), set(), set())
+                                                       seen_predicates, seen_functions, seen_objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
-            assert set() == preds == funcs == objs
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
 
         @staticmethod
         @pytest.mark.parametrize(
@@ -630,13 +638,47 @@ class TestValidateProof:
                 ((50, ('NOT', ('P',)), [20], 'NI'),
                  {20: (SubProofKind.conditional, {('P',)}, {('Q',)})}),
             ])
-        def test_bad(proof, facts_by_index):
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
             with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index, set(), set(), set())
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
-    @pytest.mark.skip
     class TestNegationElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('P', 'x'), [20], 'NE'),
+                 {20: ('NOT', ('NOT', ('P', 'x')))}),
+                ((50, ('NOT', ('P', 'x')), [20], 'NE'),
+                 {20: ('NOT', ('NOT', ('NOT', ('P', 'x'))))}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('P', 'x'), [20], 'NE'),
+                 {20: ('NOT', ('P', 'x'))}),
+                ((50, ('NOT', ('P', 'x')), [30], 'NE'),
+                 {20: ('NOT', ('NOT', ('NOT', ('P', 'x'))))}),
+                ((50, ('NOT', ('P', 'x')), [20], 'NE'),
+                 {20: ('NOT', ('Q', ('NOT', ('P', 'x'))))}),
+                ((50, ('Q', ('P', 'x')), [20], 'NE'),
+                 {20: ('NOT', ('NOT', ('NOT', ('P', 'x'))))}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestContradictionIntroduction:
