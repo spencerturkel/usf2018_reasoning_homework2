@@ -374,7 +374,25 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = predicate
 
                 return facts, seen_predicates, seen_functions, seen_objects
-            # TODO
+
+            if rule == 'DI':
+                if len(predicate) != 3 or len(cited_indices) != 1:
+                    raise InvalidProof
+
+                tag, first_arg, second_arg = predicate
+
+                if tag != 'OR':
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                if cited_proof != first_arg and cited_proof != second_arg:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+
+                return facts, seen_predicates, seen_functions, seen_objects
 
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant

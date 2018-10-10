@@ -339,9 +339,51 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
 
-    @pytest.mark.skip
     class TestDisjunctionIntroduction:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
+                 {40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != proof[0]}
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P'}, {'f'}, {'x', 'y'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P', 'Q'}, {'f'}, {'x'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P', 'Q'}, set(), {'x', 'y'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40, 30], 'DI'),
+                 {40: ('P', ('f', 'x')), 30: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('OR', ('P', ('f', 'x')), ('Q',)), [40], 'DI'),
+                 {40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestDisjunctionElimination:
