@@ -785,9 +785,44 @@ class TestValidateProof:
     class TestExistenceElimination:
         pass
 
-    @pytest.mark.skip
     class TestSupposition:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [], 'S'), dict()),
+                ((50, ('P', 'x'), [], 'S'), {20: ('Q',)}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, predicates, functions, objects', [
+                ((50, ('CONTR',), [], 'S'), dict(), set(), set(), set()),
+                ((50, ('P', ('CONTR', 'x')), [], 'S'), dict(), set(), set(), set()),
+                ((50, ('P',), [], 'S'), {50: ('P',)}, set(), set(), set()),
+                ((50, ('P',), [], 'S'), {20: ('P',)}, set(), set(), set()),
+                ((50, ('Q',), [20], 'S'), {20: ('Q',)}, set(), set(), set()),
+                ((50, ('Q',), [], 'S'), {20: ('Q',)}, set(), set(), set()),
+                ((50, ('P',), [], 'S'), dict(), set(), {'P'}, set()),
+                ((50, ('P',), [], 'S'), dict(), set(), set(), {'P'}),
+                ((50, ('P', ('f', 'x')), [], 'S'), dict(), {'f'}, set(), set()),
+                ((50, ('P', ('f', 'x')), [], 'S'), dict(), set(), set(), {'f'}),
+                ((50, ('P', 'x'), [], 'S'), dict(), {'x'}, set(), set()),
+                ((50, ('P', 'x'), [], 'S'), dict(), set(), {'x'}, set()),
+            ])
+        def test_bad(proof, facts_by_index, predicates, functions, objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               predicates, functions, objects)
 
     @pytest.mark.skip
     class TestReiteration:

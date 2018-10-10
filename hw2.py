@@ -574,6 +574,25 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = predicate
                 return facts, seen_predicates, seen_functions, seen_objects
 
+        if rule == 'S':
+            if cited_indices or predicate in facts_by_line.values():
+                raise InvalidProof
+
+            pred_syms, fun_syms, obj_syms = symbols_of(predicate)
+
+            if 'CONTR' in pred_syms | fun_syms \
+                    or pred_syms & (seen_functions | seen_objects | fun_syms | obj_syms) \
+                    or fun_syms & (seen_predicates | seen_objects | pred_syms | obj_syms) \
+                    or obj_syms & (seen_predicates | seen_functions | pred_syms | fun_syms):
+                raise InvalidProof
+
+            facts = facts_by_line.copy()
+            facts[index] = predicate
+            seen_predicates = seen_predicates | pred_syms
+            seen_functions = seen_functions | fun_syms
+            seen_objects = seen_objects | obj_syms
+            return facts, seen_predicates, seen_functions, seen_objects
+
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof
