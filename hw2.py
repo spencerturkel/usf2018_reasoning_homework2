@@ -330,9 +330,9 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             facts_by_line[index] = predicate
 
             pred_syms, fun_syms, obj_syms = symbols_of(instantiation)
-            seen_predicates |= pred_syms
-            seen_functions |= fun_syms
-            seen_objects |= obj_syms
+            seen_predicates = seen_predicates | pred_syms
+            seen_functions = seen_functions | fun_syms
+            seen_objects = seen_objects | obj_syms | {variable}
 
             return facts_by_line, seen_predicates, seen_functions, seen_objects
 
@@ -396,10 +396,11 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
-            index, statement = proof
-            if statement in seen_predicates | seen_functions | seen_objects:
+            index, variable = proof
+            if index in facts_by_line or variable in seen_predicates | seen_functions | seen_objects:
                 raise InvalidProof
-            return facts_by_line, seen_predicates, seen_functions, seen_objects | {statement}
+
+            return facts_by_line, seen_predicates, seen_functions, seen_objects | {variable}
 
         else:  # sub-proof
             index, sub_proof_list = proof
