@@ -860,49 +860,37 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                seen_predicates, seen_functions, seen_objects)
 
-    class TestArbitrarySubProof:
-        @staticmethod
-        @pytest.mark.parametrize(
-            'proof, facts_by_index, result_facts', [
-                ((50, []),
-                 {20: 'CONTR'},
-                 {20: 'CONTR'}),
-                ((30, [
-                    (40, ('P',), [10], 'RE'),
-                    (50, ('Q',), [20], 'RE')
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof, facts_by_index, result_facts', [
+            ((50, []),
+             {20: 'CONTR'},
+             {20: 'CONTR'}),
+            ((30, [
+                (40, ('P',), [10], 'RE'),
+                (50, ('Q',), [20], 'RE')
+            ]),
+             {10: ('P',), 20: ('Q',)},
+             {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
+            ((30, [
+                (40, [
+                    (50, ('P',), [10], 'RE'),
                 ]),
-                 {10: ('P',), 20: ('Q',)},
-                 {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
-                ((30, [
-                    (40, [
-                        (50, ('P',), [10], 'RE'),
-                    ]),
-                    (60, [
-                        (70, ('Q',), [20], 'RE'),
-                    ]),
+                (60, [
+                    (70, ('Q',), [20], 'RE'),
                 ]),
-                 {10: ('P',), 20: ('Q',)},
-                 {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
-            ])
-        def test_good(proof, facts_by_index, result_facts,
-                      seen_predicates, seen_functions, seen_objects):
-            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
-                                                       seen_predicates, seen_functions, seen_objects)
-            assert result_facts == facts
-            assert seen_predicates == preds
-            assert seen_functions == funcs
-            assert seen_objects == objs
-
-        @staticmethod
-        @pytest.mark.parametrize(
-            'proof, facts_by_index, result_facts', [
-            ])
-        @pytest.mark.skip
-        def test_bad(proof, facts_by_index, result_facts,
-                     seen_predicates, seen_functions, seen_objects):
-            with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index,
-                               seen_predicates, seen_functions, seen_objects)
+            ]),
+             {10: ('P',), 20: ('Q',)},
+             {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
+        ])
+    def test_arbitrary_sub_proof(proof, facts_by_index, result_facts,
+                                 seen_predicates, seen_functions, seen_objects):
+        facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                   seen_predicates, seen_functions, seen_objects)
+        assert result_facts == facts
+        assert seen_predicates == preds
+        assert seen_functions == funcs
+        assert seen_objects == objs
 
     @pytest.mark.skip
     class TestConditionalSubProof:
