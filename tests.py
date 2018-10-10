@@ -594,9 +594,45 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, facts_by_index, set(), set(), set())
 
-    @pytest.mark.skip
     class TestNegationIntroduction:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('NOT', ('P', 'x')), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P', 'x')}, {'CONTR'})}),
+                ((50, ('NOT', ('P',)), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P',)}, {'CONTR', ('Q',)})}),
+            ])
+        def test_good(proof, facts_by_index):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       set(), set(), set())
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds == funcs == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('NOT', ('P', 'x')), [], 'NI'),
+                 {20: (SubProofKind.conditional, {('P', 'x')}, {'CONTR'})}),
+                ((50, ('NOT', ('P', 'x')), [20, 20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P', 'x')}, {'CONTR'})}),
+                ((50, ('NOT', ('P', 'x')), [20], 'NI'),
+                 {20: (SubProofKind.universal, {('P', 'x')}, {'CONTR'})}),
+                ((50, (('P',), ('Q',)), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P',)}, {'CONTR'})}),
+                ((50, ('NOT', ('P', 'x')), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P', 'x'), ('Q',)}, {'CONTR'})}),
+                ((50, ('NOT', ('P', 'x')), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P', 'y')}, {'CONTR'})}),
+                ((50, ('NOT', ('P',)), [20], 'NI'),
+                 {20: (SubProofKind.conditional, {('P',)}, {('Q',)})}),
+            ])
+        def test_bad(proof, facts_by_index):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, set(), set(), set())
 
     @pytest.mark.skip
     class TestNegationElimination:

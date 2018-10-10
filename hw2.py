@@ -487,6 +487,35 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = consequent
                 return facts, seen_predicates, seen_functions, seen_objects
 
+            if rule == 'NI':
+                if len(predicate) != 2 or len(cited_indices) != 1:
+                    raise InvalidProof
+
+                tag, negated_predicate = predicate
+
+                if tag != 'NOT':
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                if len(cited_proof) != 3:
+                    raise InvalidProof
+
+                kind, conditions, sub_facts = cited_proof
+
+                if kind != SubProofKind.conditional \
+                        or len(conditions) != 1\
+                        or 'CONTR' not in sub_facts:
+                    raise InvalidProof
+
+                [cond] = conditions
+                if cond != negated_predicate:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects
+
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof
