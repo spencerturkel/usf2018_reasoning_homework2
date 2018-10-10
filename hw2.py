@@ -460,6 +460,33 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
                 return facts, seen_predicates, seen_functions, seen_objects
 
+            if rule == 'IE':
+                if len(cited_indices) != 2:
+                    raise InvalidProof
+
+                antecedent = None
+                consequent = None
+                antecedent_proof = None
+
+                for cited_proof in citations:
+                    if cited_proof[0] == 'IMPLIES':
+                        _, antecedent, consequent = cited_proof
+                        if predicate != consequent:
+                            raise InvalidProof
+                        continue
+
+                    antecedent_proof = cited_proof
+
+                if antecedent_proof is None \
+                        or antecedent is None \
+                        or consequent is None \
+                        or antecedent_proof != antecedent:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = consequent
+                return facts, seen_predicates, seen_functions, seen_objects
+
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof

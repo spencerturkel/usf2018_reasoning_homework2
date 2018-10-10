@@ -551,9 +551,48 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, facts_by_index, set(), set(), set())
 
-    @pytest.mark.skip
     class TestImplicationElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('Q',), [20, 30], 'IE'),
+                 {20: ('IMPLIES', ('P',), ('Q',)),
+                  30: ('P',)}),
+                ((50, ('Q',), [30, 20], 'IE'),
+                 {20: ('IMPLIES', ('P', 'x'), ('Q',)),
+                  30: ('P', 'x')}),
+            ])
+        def test_good(proof, facts_by_index):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       set(), set(), set())
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds == funcs == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('Q',), [20, 30, 30], 'IE'),
+                 {20: ('IMPLIES', ('P',), ('Q',)),
+                  30: ('P',)}),
+
+                ((50, ('Q',), [20], 'IE'),
+                 {20: ('IMPLIES', ('P',), ('Q',)),
+                  30: ('P',)}),
+
+                ((50, ('Q',), [20, 30], 'IE'),
+                 {20: ('IMPLIES', ('P',), ('Q', 'x')),
+                  30: ('P',)}),
+
+                ((50, ('Q',), [20, 30], 'IE'),
+                 {20: ('IMPLIES', ('P',), ('Q',)),
+                  30: ('P', 'x')}),
+            ])
+        def test_bad(proof, facts_by_index):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, set(), set(), set())
 
     @pytest.mark.skip
     class TestNegationIntroduction:
