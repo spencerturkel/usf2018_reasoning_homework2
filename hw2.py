@@ -343,7 +343,7 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 raise InvalidProof
 
             try:
-                citations = {facts_by_line[i] for i in cited_indices}
+                citations = [facts_by_line[i] for i in cited_indices]
             except KeyError:
                 raise InvalidProof
 
@@ -397,7 +397,7 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             if rule == 'DE':
                 disjuncts = None
                 antecedents = set()
-                consequents = set()
+                consequents = []
 
                 for cited_proof in citations:
                     if len(cited_proof) != 3:
@@ -405,8 +405,12 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                     tag, *rest = cited_proof
 
                     if tag == SubProofKind.conditional:
-                        antecedents.add(rest[0])
-                        consequents.add(rest[1])
+                        sub_antecedents, sub_consequents = rest
+                        if len(sub_antecedents) != 1:
+                            raise InvalidProof
+                        [ant] = sub_antecedents
+                        antecedents.add(ant)
+                        consequents.append(sub_consequents)
                         continue
 
                     if tag != 'OR':
@@ -416,9 +420,12 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
                 if not disjuncts \
                         or disjuncts != antecedents \
-                        or len(cited_indices) != len(antecedents) + 1 \
-                        or consequents != {predicate}:
+                        or len(cited_indices) != len(antecedents) + 1:
                     raise InvalidProof
+
+                for consequent_set in consequents:
+                    if predicate not in consequent_set:
+                        raise InvalidProof
 
                 facts = facts_by_line.copy()
                 facts[index] = predicate
@@ -428,6 +435,10 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             if rule == 'II':
                 if len(cited_indices) != 1:
                     raise InvalidProof
+                [sub_proof] = citations
+                if len(sub_proof) != 3:
+                    raise InvalidProof
+                kind, conditions, sub_fact = sub_proof
                 tag, antecedent, consequent = predicate
                 pass
 
