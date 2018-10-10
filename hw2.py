@@ -269,6 +269,7 @@ class SubProofKind(Enum):
     conditional = 10
     universal = 20
     existential = 30
+    arbitrary = 40
 
 
 def instantiate(obj, quantifier_predicate, fresh):
