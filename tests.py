@@ -210,6 +210,7 @@ class TestInstantiate:
 
 class TestValidateProof:
     class TestUniversalConstant:
+
         @staticmethod
         @pytest.mark.parametrize(
             'proof, seen_predicates, seen_functions, seen_objects', [
@@ -233,6 +234,7 @@ class TestValidateProof:
                 validate_proof(proof, dict(), seen_predicates, seen_functions, seen_objects)
 
     class TestExistentialConstant:
+
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
@@ -255,3 +257,113 @@ class TestValidateProof:
             with pytest.raises(InvalidProof):
                 validate_proof(proof, {5: ('EXISTS', 'y', ('P', 'y'))},
                                seen_predicates, seen_functions, seen_objects)
+
+    class TestConjunctionIntroduction:
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30, 40], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P',), ('Q',)), [40, 30], 'CI'),
+                 {30: ('P',), 40: ('Q',)},
+                 {'P', 'Q'}, set(), set()),
+                ((50, ('AND', ('P',), ('P',)), [30], 'CI'),
+                 {30: ('P',)},
+                 {'P', 'Q'}, set(), set()),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != proof[0]}
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30, 40], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30], 'CI'),
+                 {30: ('P', ('f', 'x'))}, {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [40], 'CI'),
+                 {40: ('Q', 'y')}, {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [30, 40, 40], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P', ('f', 'x')), ('Q',)), [30, 40], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+                ((50, ('AND', ('P',), ('Q', 'y')), [30, 40], 'CI'),
+                 {30: ('P', ('f', 'x')), 40: ('Q', 'y')},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
+
+    @pytest.mark.skip
+    class TestConjunctionElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestDisjunctionIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestDisjunctionElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestImplicationIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestImplicationElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestNegationIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestNegationElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestContradictionIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestContradictionElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestUniversalIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestUniversalElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestExistenceIntroduction:
+        pass
+
+    @pytest.mark.skip
+    class TestExistenceElimination:
+        pass
+
+    @pytest.mark.skip
+    class TestSupposition:
+        pass
+
+    @pytest.mark.skip
+    class TestReiteration:
+        pass

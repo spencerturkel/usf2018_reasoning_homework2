@@ -338,6 +338,28 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
         else:  # proof line
             index, predicate, cited_indices, rule = proof
+
+            if index in facts_by_line:
+                raise InvalidProof
+
+            try:
+                citations = {facts_by_line[i] for i in cited_indices}
+            except KeyError:
+                raise InvalidProof
+
+            if rule == 'CI':
+                if len(predicate) != 3 or not (0 < len(cited_indices) < 3):
+                    raise InvalidProof
+
+                tag, first_arg, second_arg = predicate
+
+                if tag != 'AND' or first_arg not in citations or second_arg not in citations:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+
+                return facts, seen_predicates, seen_functions, seen_objects
             # TODO
 
     if proof_length == 2:
@@ -349,7 +371,19 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
         else:  # sub-proof
             index, sub_proof_list = proof
-            # TODO
+
+            if index in facts_by_line:
+                raise InvalidProof
+            raise InvalidProof  # TODO
+
+            special_sub_proof = None
+            sub_facts = facts_by_line
+            sub_predicates = seen_predicates
+            sub_functions = seen_functions
+            sub_objects = seen_objects
+            for sub_proof in sub_proof_list:
+                sub_facts, sub_predicates, sub_functions, sub_objects = validate_proof(
+                    sub_proof, sub_facts, sub_predicates, sub_functions, sub_objects)
 
     raise InvalidProof
 
