@@ -319,7 +319,10 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             index, variable, predicate, cited_index = proof
             seen_symbols = seen_predicates | seen_functions | seen_objects
 
-            if index in facts_by_line or cited_index not in facts_by_line or variable in seen_symbols:
+            if index in facts_by_line \
+                    or cited_index not in facts_by_line \
+                    or variable in seen_symbols \
+                    or variable == 'CONTR':
                 raise InvalidProof
 
             instantiation = instantiate(variable, facts_by_line[cited_index], lambda: None)
@@ -544,7 +547,7 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 [first_citation, second_citation] = citations
 
                 if first_citation != ('NOT', second_citation) \
-                    and second_citation != ('NOT', first_citation):
+                        and second_citation != ('NOT', first_citation):
                     raise InvalidProof
 
                 facts = facts_by_line.copy()
@@ -554,7 +557,9 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant
             index, variable = proof
-            if index in facts_by_line or variable in seen_predicates | seen_functions | seen_objects:
+            if index in facts_by_line \
+                    or variable in seen_predicates | seen_functions | seen_objects \
+                    or variable == 'CONTR':
                 raise InvalidProof
 
             return facts_by_line, seen_predicates, seen_functions, seen_objects | {variable}

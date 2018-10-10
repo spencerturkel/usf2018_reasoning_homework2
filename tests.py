@@ -230,6 +230,7 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'CONTR'), dict(), set(), set(), set()),
                 ((10, 'x'), dict(), {'x'}, set(), set()),
                 ((10, 'x'), dict(), set(), {'x'}, set()),
                 ((10, 'x'), dict(), set(), set(), {'x'}),
@@ -263,6 +264,7 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'CONTR', ('P',), 5), set(), set(), {'y'}),
                 ((10, 'x', ('P', 'x'), 5), set(), set(), {'x', 'y'}),
                 ((10, 'x', ('Q', 'x'), 5), {'P', 'Q'}, set(), {'y'}),
                 ((10, 'f', ('P', 'f'), 5), {'P'}, {'f'}, {'y'}),
@@ -734,7 +736,56 @@ class TestValidateProof:
 
     @pytest.mark.skip
     class TestContradictionElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [20, 30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds
+            assert seen_functions == funcs
+            assert seen_objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, 'CONTR', [], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20, 30], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, ('P', 'x'), [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, ('NOT', ('P', 'x')), [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('P', 'x')}),
+                ((50, 'CONTR', [30, 20], 'XI'),
+                 {20: ('NOT', ('P', 'x')),
+                  30: ('NOT', ('P', 'x'))}),
+            ])
+        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
     class TestUniversalIntroduction:
