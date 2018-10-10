@@ -498,3 +498,19 @@ class TestValidateProof:
     @pytest.mark.skip
     class TestReiteration:
         pass
+
+    @pytest.mark.skip
+    class TestArbitrarySubProof:
+        pass
+
+    @pytest.mark.skip
+    class TestConditionalSubProof:
+        pass
+
+    @pytest.mark.skip
+    class TestUniversalSubProof:
+        pass
+
+    @pytest.mark.skip
+    class TestExistentialSubProof:
+        pass
