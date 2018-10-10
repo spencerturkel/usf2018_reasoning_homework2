@@ -238,6 +238,20 @@ class TestValidateProof:
             'proof, facts_by_line, seen_predicates, seen_functions, seen_objects', [
                 ((10, 'x', 'CONTR', 5), {5: ('EXISTS', 'y', 'CONTR')}, set(), set(), {'y'}),
                 ((10, 'x', ('P', 'x'), 5), {5: ('EXISTS', 'y', ('P', 'y'))}, {'P'}, set(), {'y'}),
+                ((10, 'x', ('P', 'x', 'z'), 5), {5: ('EXISTS', 'y', ('P', 'y', 'z'))},
+                 {'P'}, set(), {'y', 'z'}),
             ])
         def test_good(proof, facts_by_line, seen_predicates, seen_functions, seen_objects):
             validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_objects)
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, seen_predicates, seen_functions, seen_objects', [
+                ((10, 'x', ('P', 'x'), 5), set(), set(), {'x', 'y'}),
+                ((10, 'x', ('Q', 'x'), 5), {'P', 'Q'}, set(), {'y'}),
+                ((10, 'f', ('P', 'f'), 5), {'P'}, {'f'}, {'y'}),
+            ])
+        def test_bad(proof, seen_predicates, seen_functions, seen_objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, {5: ('EXISTS', 'y', ('P', 'y'))},
+                               seen_predicates, seen_functions, seen_objects)
