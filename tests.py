@@ -382,6 +382,9 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
+                ((50, ('AND', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
+                 {40: ('P', ('f', 'x'))},
+                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
                 ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
                  {40: ('P', ('f', 'x'))},
                  {'P'}, {'f'}, {'x', 'y'}),
@@ -410,12 +413,26 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
-                 {40: ('P', ('f', 'x'))}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40], 'DI'),
-                 {40: ('Q', 'y')}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {30: (SubProofKind.conditional, ('P',), ('R',)),
+                  20: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {40: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  20: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  40: (SubProofKind.conditional, ('Q',), ('R',)),
+                  30: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: ('OR', ('P',), ('P',))}),
             ])
-        @pytest.mark.skip
         def test_good(proof, facts_by_index):
             index, predicate, *_ = proof
             facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
@@ -426,30 +443,49 @@ class TestValidateProof:
 
         @staticmethod
         @pytest.mark.parametrize(
-            'proof, facts_by_index, seen_predicates, seen_functions, seen_objects', [
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P'}, {'f'}, {'x', 'y'}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x'}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, set(), {'x', 'y'}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [40, 30], 'DI'),
-                 {40: ('P', ('f', 'x')), 30: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q', 'y')), [30], 'DI'),
-                 {40: ('P', ('f', 'x'))},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
-                ((50, ('OR', ('P', ('f', 'x')), ('Q',)), [40], 'DI'),
-                 {40: ('Q', 'y')},
-                 {'P', 'Q'}, {'f'}, {'x', 'y'}),
+            'proof, facts_by_index', [
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('S',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('S',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('AND', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P', 'x'), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q', 'x'), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [20, 30], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('R',), [30, 40], 'DE'),
+                 {20: (SubProofKind.conditional, ('P',), ('R',)),
+                  30: (SubProofKind.conditional, ('Q',), ('R',)),
+                  40: ('OR', ('P',), ('Q',))}),
+                ((50, ('P',), [30], 'DE'),
+                 {30: ('OR', ('P',), ('P',))}),
             ])
-        @pytest.mark.skip
-        def test_bad(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+        def test_bad(proof, facts_by_index):
             with pytest.raises(InvalidProof):
-                validate_proof(proof, facts_by_index, seen_predicates, seen_functions, seen_objects)
+                validate_proof(proof, facts_by_index, set(), set(), set())
 
     @pytest.mark.skip
     class TestImplicationIntroduction:
