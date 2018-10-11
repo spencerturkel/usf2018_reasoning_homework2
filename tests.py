@@ -936,3 +936,99 @@ class TestValidateProof:
     @pytest.mark.skip
     class TestExistentialSubProof:
         pass
+
+
+class TestVerifyProof:
+
+    @staticmethod
+    @pytest.mark.parametrize('proof', [
+        """
+        (SUBP 5
+            (10 (AND (NOT (P a)) (NOT (P b))) ([] S))
+            (SUBP 15
+                (20 (OR (P a) (P b)) ([] S))
+                (SUBP 25
+                    (30 (P a) ([] S))
+                    (40 (NOT (P a)) ([10] CE))
+                    (50 (CONTR) ([30, 40] XI)))
+                (SUBP 55
+                    (60 (P b) ([] S))
+                    (70 (NOT (P b)) ([10] CE))
+                    (80 (CONTR) ([60, 70] XI)))
+                (90 (CONTR) ([20, 25, 55] DE)))
+            (100 (NOT (OR (P a) (P b))) ([15] NI)))
+        """,
+        """
+        (SUBP 5
+            (10 (AND (NOT (P)) (NOT (P b))) ([] S))
+            (SUBP 15
+                (20 (OR (P) (P b)) ([] S))
+                (SUBP 25
+                    (30 (P) ([] S))
+                    (40 (NOT (P)) ([10] CE))
+                    (50 (CONTR) ([40, 30] XI)))
+                (SUBP 55
+                    (60 (P b) ([] S))
+                    (70 (NOT (P b)) ([10] CE))
+                    (80 (CONTR) ([70, 60] XI)))
+                (90 (CONTR) ([25, 20, 55] DE)))
+            (100 (NOT (OR (P) (P b))) ([15] NI)))
+        """,
+    ])
+    def test_good(proof):
+        assert verifyProof(proof) == 'V'
+
+    @staticmethod
+    @pytest.mark.parametrize('proof', [
+        """
+        (SUBP 5
+            (10 (AND (NOT (P a)) (NOT (P b))) ([] S))
+            (SUBP 10
+                (20 (OR (P a) (P b)) ([] S))
+                (SUBP 25
+                    (30 (P a) ([] S))
+                    (40 (NOT (P a)) ([10] CE))
+                    (50 (CONTR) ([30, 40] XI)))
+                (SUBP 55
+                    (60 (P b) ([] S))
+                    (70 (NOT (P b)) ([10] CE))
+                    (80 (CONTR) ([60, 70] XI)))
+                (90 (CONTR) ([20, 25, 55] DE)))
+            (100 (NOT (OR (P a) (P b))) ([15] NI)))
+        """,
+        """
+        (SUBP 5
+            (10 (AND (NOT (P a)) (NOT (P b))) ([] S))
+            (SUBP 15
+                (20 (OR (P a) (P b)) ([] S))
+                (SUBP 25
+                    (30 (P a) ([] S))
+                    (35 (A P) ([] S))
+                    (40 (NOT (P a)) ([10] CE))
+                    (50 (CONTR) ([30, 40] XI)))
+                (SUBP 55
+                    (60 (P b) ([] S))
+                    (70 (NOT (P b)) ([10] CE))
+                    (80 (CONTR) ([60, 70] XI)))
+                (90 (CONTR) ([20, 25, 55] DE)))
+            (100 (NOT (OR (P a) (P b))) ([15] NI)))
+        """,
+        """
+        (SUBP 5
+            (10 (AND (NOT (P a)) (NOT (P b))) ([] S))
+            (SUBP 15
+                (20 (OR (P a) (P b)) ([] S))
+                (SUBP 25
+                    (30 (P a) ([] S))
+                    (40 (NOT (P a)) ([10] CE))
+                    (50 (CONTR) ([30, 40] XI)))
+                (SUBP 55
+                    (60 (P b) ([] S))
+                    (70 (NOT (P b)) ([10] CE))
+                    (80 (CONTR) ([60, 70] XI)))
+                (90 (CONTR) ([25, 55] DE)))
+            (100 (NOT (OR (P a) (P b))) ([15] NI)))
+        """,
+    ])
+    def test_bad(proof):
+        assert verifyProof(proof) == 'I'
