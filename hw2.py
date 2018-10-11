@@ -624,8 +624,14 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 raise InvalidProof
 
             outer_facts = facts_by_line.copy()
+            kind = SubProofKind.arbitrary
+            antecedents = set()
 
             for sub_proof in sub_proof_list:
+                if len(sub_proof) == 4 and sub_proof[3] == 'S':
+                    antecedents.add(sub_proof[1])
+                    kind = SubProofKind.conditional
+
                 facts_by_line, seen_predicates, seen_functions, seen_objects = validate_proof(
                     sub_proof, facts_by_line, seen_predicates,
                     seen_functions, seen_objects)
@@ -634,12 +640,18 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
             for k, v in facts_by_line.items():
                 if k in outer_facts:
                     continue
-                if v[0] == SubProofKind.arbitrary:
+                tag = v[0]
+                if tag == SubProofKind.arbitrary:
                     sub_facts |= v[1]
+                    continue
+                if tag == SubProofKind.conditional:
                     continue
                 sub_facts.add(v)
 
-            outer_facts[index] = (SubProofKind.arbitrary, sub_facts)
+            if kind == SubProofKind.arbitrary:
+                outer_facts[index] = (SubProofKind.arbitrary, sub_facts)
+            if kind == SubProofKind.conditional:
+                outer_facts[index] = (SubProofKind.conditional, antecedents, sub_facts)
             return outer_facts, seen_predicates, seen_functions, seen_objects
 
     raise InvalidProof

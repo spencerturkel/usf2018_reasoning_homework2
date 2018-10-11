@@ -898,8 +898,8 @@ class TestValidateProof:
             ((30, [
                 (40, ('P',), [], 'S'),
                 (50, ('Q',), [20], 'RE'),
-                (50, ('R',), [], 'S'),
-                (60, ('P',), [50], 'RE'),
+                (60, ('R',), [], 'S'),
+                (70, ('Q',), [50], 'RE'),
             ]),
              {20: ('Q',)},
              {20: ('Q',), 30: (SubProofKind.conditional,
@@ -913,20 +913,19 @@ class TestValidateProof:
                 (60, [
                     (70, ('S',), [], 'S'),
                 ]),
-                (35, ('Q',), [20], 'RE'),
+                (80, ('Q',), [20], 'RE'),
             ]),
              {10: ('P',), 20: ('Q',)},
              {10: ('P',), 20: ('Q',), 30: (SubProofKind.conditional,
                                            {('R',)},
                                            {('R',), ('Q',), ('P',)})}),
         ])
-    @pytest.mark.skip
     def test_conditional_sub_proof(proof, facts_by_index, result_facts,
                                    seen_predicates, seen_functions, seen_objects):
         facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
                                                    seen_predicates, seen_functions, seen_objects)
         assert result_facts == facts
-        assert seen_predicates == preds
+        assert seen_predicates == preds - {'R', 'Q', 'P', 'S'}
         assert seen_functions == funcs
         assert seen_objects == objs
 
