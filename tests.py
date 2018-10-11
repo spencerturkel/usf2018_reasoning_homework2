@@ -865,13 +865,13 @@ class TestValidateProof:
         'proof, facts_by_index, result_facts', [
             ((50, []),
              {20: 'CONTR'},
-             {20: 'CONTR'}),
+             {20: 'CONTR', 50: (SubProofKind.arbitrary, set())}),
             ((30, [
                 (40, ('P',), [10], 'RE'),
                 (50, ('Q',), [20], 'RE')
             ]),
              {10: ('P',), 20: ('Q',)},
-             {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
+             {10: ('P',), 20: ('Q',), 30: (SubProofKind.arbitrary, {('P',), ('Q',)})}),
             ((30, [
                 (40, [
                     (50, ('P',), [10], 'RE'),
@@ -881,7 +881,7 @@ class TestValidateProof:
                 ]),
             ]),
              {10: ('P',), 20: ('Q',)},
-             {20: 'CONTR', 30: (SubProofKind.arbitrary, {'P', 'Q'})}),
+             {10: ('P',), 20: ('Q',), 30: (SubProofKind.arbitrary, {('P',), ('Q',)})}),
         ])
     def test_arbitrary_sub_proof(proof, facts_by_index, result_facts,
                                  seen_predicates, seen_functions, seen_objects):

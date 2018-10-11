@@ -622,16 +622,25 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
             if index in facts_by_line:
                 raise InvalidProof
-            raise InvalidProof  # TODO
 
-            special_sub_proof = None
-            sub_facts = facts_by_line
-            sub_predicates = seen_predicates
-            sub_functions = seen_functions
-            sub_objects = seen_objects
+            outer_facts = facts_by_line.copy()
+
             for sub_proof in sub_proof_list:
-                sub_facts, sub_predicates, sub_functions, sub_objects = validate_proof(
-                    sub_proof, sub_facts, sub_predicates, sub_functions, sub_objects)
+                facts_by_line, seen_predicates, seen_functions, seen_objects = validate_proof(
+                    sub_proof, facts_by_line, seen_predicates,
+                    seen_functions, seen_objects)
+
+            sub_facts = set()
+            for k, v in facts_by_line.items():
+                if k in outer_facts:
+                    continue
+                if v[0] == SubProofKind.arbitrary:
+                    sub_facts |= v[1]
+                    continue
+                sub_facts.add(v)
+
+            outer_facts[index] = (SubProofKind.arbitrary, sub_facts)
+            return outer_facts, seen_predicates, seen_functions, seen_objects
 
     raise InvalidProof
 
