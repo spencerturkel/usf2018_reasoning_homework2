@@ -770,16 +770,86 @@ class TestValidateProof:
                                seen_predicates, seen_functions, seen_objects)
 
     @pytest.mark.skip
-    class TestUniversalIntroduction:
-        pass
+    class TestUniversalIntroduction: pass
 
     @pytest.mark.skip
     class TestUniversalElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, objects', [
+                ((50, ('P', 'x'), [10], 'AE'),
+                 {10: ('FORALL', 'y', ('P', 'y'))},
+                 {'x'}),
+                ((50, ('P', ('f', 'a'), 'a', 'z'), [10], 'AE'),
+                 {10: ('FORALL', 'y', ('P', ('f', 'y'), 'y', 'z'))},
+                 {'x', 'a'}),
+            ])
+        def test_good(proof, facts_by_index, objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index, objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds
+            assert set() == funcs
+            assert objects == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, predicates, functions', [
+                ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
+                 {10: ('FORALL', 'g', ('P', 'g', 'y'))}, set(), set()),
+                ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
+                 {10: ('FORALL', 'x', ('P', 'x', 'x'))}, set(), set()),
+                ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
+                 {10: ('FORALL', 'x', ('P', ('f', 'x'), 'x'))}, {'y'}, set()),
+                ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
+                 {10: ('FORALL', 'x', ('P', ('f', 'x'), 'x'))}, set(), {'y'}),
+                ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
+                 {10: ('FORALL', 'x', ('P', ('f', 'x'), 'x'))}, set(), set()),
+            ])
+        def test_bad(proof, facts_by_index, predicates, functions):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               predicates, functions, set())
 
     @pytest.mark.skip
     class TestExistenceIntroduction:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}),
+                ((50, ('EXISTS', 'g', ('P', 'g', 'y')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}),
+            ])
+        def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                       seen_predicates, seen_functions, seen_objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert seen_predicates == preds - {'P'}
+            assert seen_functions == funcs
+            assert seen_objects == objs - {'x'}
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, predicates, functions, objects', [
+                ((50, ('EXISTS', 'x', ('P', 'x', 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
+                ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, {'x'}, set(), set()),
+                ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), {'x'}, set()),
+                ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), set(), {'x'}),
+            ])
+        def test_bad(proof, facts_by_index, predicates, functions, objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               predicates, functions, objects)
 
     @pytest.mark.skip
     class TestExistenceElimination:
@@ -929,13 +999,104 @@ class TestValidateProof:
         assert seen_functions == funcs
         assert seen_objects == objs
 
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof, facts_by_index, result_facts', [
+            ((35, [(40, 'x'), ]),
+             dict(),
+             {35: (SubProofKind.universal, 'x', set())}),
+            ((35, [
+                (40, 'x'),
+                (50, ('P', 'x'), [20], 'AE'),
+                (60, ('Q', 'x'), [30], 'AE'),
+                (70, ('R',), [10], 'AE'),
+            ]),
+             {10: ('R',),
+              20: ('FORALL', 'x', ('P', 'x')),
+              30: ('FORALL', 'y', ('Q', 'y'))},
+             {10: ('R',),
+              20: ('FORALL', 'x', ('P', 'x')),
+              30: ('FORALL', 'y', ('Q', 'y')),
+              35: (SubProofKind.universal, 'x', {('P', 'x'), ('Q', 'x'), ('R',)})}),
+            ((35, [
+                (40, 'x'),
+                (45, [
+                    (50, 'y'),
+                    (55, ('R',), [10], 'RE'),
+                ]),
+                (47, [
+                    (50, 'y', ('Q', 'y'), [33]),
+                    (55, ('R',), [10], 'RE'),
+                ]),
+                (60, ('Q', 'x'), [30], 'AE'),
+                (65, [
+                    (80, ('T',), [], 'S'),
+                ]),
+                (90, [
+                    (100, ('P',), [20], 'RE'),
+                ]),
+            ]),
+             {10: ('R',),
+              20: ('FORALL', 'x', ('P', 'x')),
+              30: ('FORALL', 'y', ('Q', 'y'))},
+             {10: ('R',), 20: ('P',),
+              30: ('FORALL', 'y', ('Q', 'y')),
+              33: ('EXISTS', 'y', ('Q', 'y')),
+              35: (SubProofKind.universal, 'x', {('Q', 'x'), ('P',)})}),
+        ])
     @pytest.mark.skip
-    class TestUniversalSubProof:
-        pass
+    def test_universal_sub_proof(proof, facts_by_index, result_facts,
+                                 seen_predicates, seen_functions, seen_objects):
+        facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                   seen_predicates, seen_functions, seen_objects)
+        assert result_facts == facts
+        assert seen_predicates == preds - {'R', 'Q', 'P', 'S'}
+        assert seen_functions == funcs
+        assert seen_objects == objs
 
+    @staticmethod
+    @pytest.mark.parametrize(
+        'proof, facts_by_index, result_facts', [
+            ((35, [
+                (40, 'x', ('P', 'x')),
+            ]),
+             dict(),
+             {35: (SubProofKind.existential, 'x', set())}),
+            ((35, [
+                (40, 'x', ('P', 'x'), 20),
+                (45, [
+                    (50, 'y'),
+                    (55, ('R',), [10], 'RE'),
+                ]),
+                (47, [
+                    (50, 'y', ('Q', 'y'), 33),
+                    (55, ('R',), [10], 'RE'),
+                ]),
+                (60, ('Q', 'x'), [30], 'AE'),
+                (65, [
+                    (80, ('R',), [], 'S'),
+                ]),
+                (90, [
+                    (100, ('T',), [15], 'RE'),
+                ]),
+            ]),
+             {10: ('R',), 15: ('T',),
+              20: ('EXISTS', 'x', ('P', 'x')),
+              30: ('FORALL', 'y', ('Q', 'y')),
+              33: ('EXISTS', 'y', ('Q', 'y'))},
+             {10: ('R',), 20: ('P',),
+              30: ('FORALL', 'y', ('Q', 'y')),
+              35: (SubProofKind.existential, 'x', {('Q', 'x'), ('T',)})}),
+        ])
     @pytest.mark.skip
-    class TestExistentialSubProof:
-        pass
+    def test_existential_sub_proof(proof, facts_by_index, result_facts,
+                                   seen_predicates, seen_functions, seen_objects):
+        facts, preds, funcs, objs = validate_proof(proof, facts_by_index,
+                                                   seen_predicates, seen_functions, seen_objects)
+        assert result_facts == facts
+        assert seen_predicates == preds - {'R', 'Q', 'P', 'S'}
+        assert seen_functions == funcs
+        assert seen_objects == objs
 
 
 class TestVerifyProof:
