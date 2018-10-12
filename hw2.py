@@ -606,6 +606,10 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                     raise InvalidProof
 
                 [cited_proof] = citations
+
+                if len(cited_proof) != 3:
+                    raise InvalidProof
+
                 tag, _, _ = cited_proof
 
                 if tag != 'FORALL':
@@ -705,12 +709,23 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
 
             outer_facts = facts_by_line.copy()
             kind = SubProofKind.arbitrary
+            const = None
             antecedents = set()
 
             for sub_proof in sub_proof_list:
-                if len(sub_proof) == 4 and sub_proof[3] == 'S':
-                    antecedents.add(sub_proof[1])
-                    kind = SubProofKind.conditional
+                if len(sub_proof) == 4:
+                    last = sub_proof[3]
+                    if last == 'S':
+                        antecedents.add(sub_proof[1])
+                        kind = SubProofKind.conditional
+                    elif isinstance(last, int):
+                        kind = SubProofKind.existential
+                        const = sub_proof[1]
+                else:
+                    last = sub_proof[1]
+                    if isinstance(last, str):
+                        kind = SubProofKind.universal
+                        const = last
 
                 facts_by_line, seen_predicates, seen_functions, seen_objects = validate_proof(
                     sub_proof, facts_by_line, seen_predicates,
@@ -724,7 +739,10 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 if tag == SubProofKind.arbitrary:
                     sub_facts |= v[1]
                     continue
-                if tag == SubProofKind.conditional:
+                if tag in [SubProofKind.conditional, SubProofKind.existential, SubProofKind.universal]:
+                    continue
+                _, _, obj_syms = symbols_of(v)
+                if kind == SubProofKind.existential and const in obj_syms:
                     continue
                 sub_facts.add(v)
 
@@ -732,6 +750,10 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 outer_facts[index] = (SubProofKind.arbitrary, sub_facts)
             if kind == SubProofKind.conditional:
                 outer_facts[index] = (SubProofKind.conditional, antecedents, sub_facts)
+            if kind == SubProofKind.universal:
+                outer_facts[index] = (SubProofKind.universal, const, sub_facts)
+            if kind == SubProofKind.existential:
+                outer_facts[index] = (SubProofKind.existential, sub_facts)
             return outer_facts, seen_predicates, seen_functions, seen_objects
 
     raise InvalidProof
