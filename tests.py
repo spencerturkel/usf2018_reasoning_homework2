@@ -769,8 +769,59 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                seen_predicates, seen_functions, seen_objects)
 
-    @pytest.mark.skip
-    class TestUniversalIntroduction: pass
+    class TestUniversalIntroduction:
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, objects', [
+                ((50, ('FORALL', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'x'}),
+                ((50, ('FORALL', 'y', ('Q',)), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z'), ('Q',)})},
+                 {'x'}),
+                ((50, ('FORALL', 'y', ('P', ('f', 'y'), 'y', 'z')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'x', {('P', ('f', 'x'), 'x', 'z')})},
+                 {'x', 'z'}),
+            ])
+        def test_good(proof, facts_by_index, objects):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index, set(), set(), objects)
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds
+            assert set() == funcs
+            assert objects | {'y'} == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index, predicates, functions, objects', [
+                ((50, ('FORALL', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', set())},
+                 {'x'}, set(), set()),
+                ((50, ('EXISTS', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'P'}, set(), {'z'}),
+                ((50, ('FORALL', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'P', 'y'}, set(), {'z'}),
+                ((50, ('FORALL', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'P'}, {'y'}, {'z'}),
+                ((50, ('FORALL', 'y', ('Q', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'P', 'Q'}, set(), {'z'}),
+                ((50, ('FORALL', 'y', ('P', 'y')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'z', {('P', 'z')})},
+                 {'P'}, set(), {'y', 'z'}),
+                ((50, ('FORALL', 'y', ('P', ('g', 'y'), 'y', 'z')), [10], 'AI'),
+                 {10: (SubProofKind.universal, 'x', {('P', ('f', 'x'), 'x', 'z')})},
+                 {'P'}, {'f'}, {'x', 'z'}),
+            ])
+        def test_bad(proof, facts_by_index, predicates, functions, objects):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               predicates, functions, objects)
 
     class TestUniversalElimination:
 
@@ -796,6 +847,9 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index, predicates, functions', [
+                ((50, ('P', 'x'), [10], 'AE'),
+                 {10: ('EXISTS', 'y', ('P', 'y'))},
+                 {'x'}, set()),
                 ((50, ('P', 'x'), [10, 10], 'AE'),
                  {10: ('FORALL', 'y', ('P', 'y'))},
                  {'x'}, set()),
@@ -829,13 +883,15 @@ class TestValidateProof:
                                                        seen_predicates, seen_functions, seen_objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
-            assert seen_predicates == preds - {'P'}
+            assert seen_predicates == preds
             assert seen_functions == funcs
             assert seen_objects == objs - {'x'}
 
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index, predicates, functions, objects', [
+                ((50, ('FORALL', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
                 ((50, ('EXISTS', 'g', ('P', 'g', 'y')), [10], 'EI'),
                  {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
                 ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10, 10], 'EI'),

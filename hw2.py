@@ -576,10 +576,33 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 return facts, seen_predicates, seen_functions, seen_objects
 
             if rule == 'AI':
-                pass  # TODO
+                if len(cited_indices) != 1 or len(predicate) != 3:
+                    raise InvalidProof
+
+                tag, var, _ = predicate
+
+                if tag != 'FORALL' or var in seen_predicates | seen_functions | seen_objects:
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                if len(cited_proof) != 3:
+                    raise InvalidProof
+
+                kind, uconst, props = cited_proof
+
+                if kind != SubProofKind.universal:
+                    raise InvalidProof
+
+                if instantiate(uconst, predicate, lambda: None) not in props:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects | {var}
 
             if rule == 'AE':
-                if len(cited_indices) != 1 or len(citations) != 1:
+                if len(cited_indices) != 1:
                     raise InvalidProof
 
                 [cited_proof] = citations
