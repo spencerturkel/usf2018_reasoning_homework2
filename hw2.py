@@ -575,37 +575,67 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 facts[index] = predicate
                 return facts, seen_predicates, seen_functions, seen_objects
 
-        if rule == 'S':
-            if cited_indices or predicate in facts_by_line.values():
+            if rule == 'AI':
+                pass  # TODO
+
+            if rule == 'AE':
+                pass  # TODO
+
+            if rule == 'EI':
+                if len(cited_indices) != 1 or len(predicate) != 3:
+                    raise InvalidProof
+
+                tag, var, _ = predicate
+
+                if tag != 'EXISTS' or var in seen_predicates | seen_functions | seen_objects:
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                _, _, cited_proof_objects = symbols_of(cited_proof)
+
+                for obj in cited_proof_objects:
+                    if instantiate(obj, predicate, lambda: None) == cited_proof:
+                        facts = facts_by_line.copy()
+                        facts[index] = predicate
+                        return facts, seen_predicates, seen_functions, seen_objects | {var}
+
                 raise InvalidProof
 
-            pred_syms, fun_syms, obj_syms = symbols_of(predicate)
+            if rule == 'EE':
+                pass  # TODO
 
-            if 'CONTR' in pred_syms | fun_syms \
-                    or pred_syms & (seen_functions | seen_objects | fun_syms | obj_syms) \
-                    or fun_syms & (seen_predicates | seen_objects | pred_syms | obj_syms) \
-                    or obj_syms & (seen_predicates | seen_functions | pred_syms | fun_syms):
-                raise InvalidProof
+            if rule == 'S':
+                if cited_indices or predicate in facts_by_line.values():
+                    raise InvalidProof
 
-            facts = facts_by_line.copy()
-            facts[index] = predicate
-            seen_predicates = seen_predicates | pred_syms
-            seen_functions = seen_functions | fun_syms
-            seen_objects = seen_objects | obj_syms
-            return facts, seen_predicates, seen_functions, seen_objects
+                pred_syms, fun_syms, obj_syms = symbols_of(predicate)
 
-        if rule == 'RE':
-            if len(cited_indices) != 1:
-                raise InvalidProof
+                if 'CONTR' in pred_syms | fun_syms \
+                        or pred_syms & (seen_functions | seen_objects | fun_syms | obj_syms) \
+                        or fun_syms & (seen_predicates | seen_objects | pred_syms | obj_syms) \
+                        or obj_syms & (seen_predicates | seen_functions | pred_syms | fun_syms):
+                    raise InvalidProof
 
-            [cited_proof] = citations
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                seen_predicates = seen_predicates | pred_syms
+                seen_functions = seen_functions | fun_syms
+                seen_objects = seen_objects | obj_syms
+                return facts, seen_predicates, seen_functions, seen_objects
 
-            if cited_proof != predicate:
-                raise InvalidProof
+            if rule == 'RE':
+                if len(cited_indices) != 1:
+                    raise InvalidProof
 
-            facts = facts_by_line.copy()
-            facts[index] = predicate
-            return facts, seen_predicates, seen_functions, seen_objects
+                [cited_proof] = citations
+
+                if cited_proof != predicate:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects
 
     if proof_length == 2:
         if isinstance(proof[1], str):  # universal constant

@@ -797,6 +797,9 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index, predicates, functions', [
+                ((50, ('P', 'x'), [10, 10], 'AE'),
+                 {10: ('FORALL', 'y', ('P', 'y'))},
+                 {'x'}, set()),
                 ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
                  {10: ('FORALL', 'g', ('P', 'g', 'y'))}, set(), set()),
                 ((50, ('P', ('f', 'y'), 'y'), [10], 'AE'),
@@ -813,15 +816,12 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                predicates, functions, set())
 
-    @pytest.mark.skip
     class TestExistenceIntroduction:
 
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index', [
                 ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
-                 {10: ('P', ('f', 'y'), 'y')}),
-                ((50, ('EXISTS', 'g', ('P', 'g', 'y')), [10], 'EI'),
                  {10: ('P', ('f', 'y'), 'y')}),
             ])
         def test_good(proof, facts_by_index, seen_predicates, seen_functions, seen_objects):
@@ -837,6 +837,10 @@ class TestValidateProof:
         @staticmethod
         @pytest.mark.parametrize(
             'proof, facts_by_index, predicates, functions, objects', [
+                ((50, ('EXISTS', 'g', ('P', 'g', 'y')), [10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
+                ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10, 10], 'EI'),
+                 {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
                 ((50, ('EXISTS', 'x', ('P', 'x', 'x')), [10], 'EI'),
                  {10: ('P', ('f', 'y'), 'y')}, set(), set(), set()),
                 ((50, ('EXISTS', 'x', ('P', ('f', 'x'), 'x')), [10], 'EI'),
