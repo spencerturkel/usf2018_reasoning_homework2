@@ -641,7 +641,19 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 raise InvalidProof
 
             if rule == 'EE':
-                pass  # TODO
+                if len(cited_indices) != 1:
+                    raise InvalidProof
+
+                [cited_proof] = citations
+
+                kind, sub_facts = cited_proof
+
+                if kind != SubProofKind.existential or predicate not in sub_facts:
+                    raise InvalidProof
+
+                facts = facts_by_line.copy()
+                facts[index] = predicate
+                return facts, seen_predicates, seen_functions, seen_objects
 
             if rule == 'S':
                 if cited_indices or predicate in facts_by_line.values():

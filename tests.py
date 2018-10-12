@@ -202,7 +202,7 @@ class TestInstantiate:
         ('a', 'x'),
         ('a', (SubProofKind.conditional, set(), {('FORALL', 'x', ('P', 'x'))})),
         ('a', (SubProofKind.universal, 'y', {('FORALL', 'x', ('P', 'x'))})),
-        ('a', (SubProofKind.existential, 'y', {('FORALL', 'x', ('P', 'x'))})),
+        ('a', (SubProofKind.existential, {('FORALL', 'x', ('P', 'x'))})),
     ])
     def test_bad(obj, quantifier_predicate):
         with pytest.raises(InvalidProof):
@@ -910,9 +910,43 @@ class TestValidateProof:
                 validate_proof(proof, facts_by_index,
                                predicates, functions, objects)
 
-    @pytest.mark.skip
     class TestExistenceElimination:
-        pass
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('Q', 'z'), [10], 'EE'),
+                 {10: (SubProofKind.existential, {('Q', 'z')})}),
+                ((50, ('Q',), [10], 'EE'),
+                 {10: (SubProofKind.existential, {('P', 'z'), ('Q',)})}),
+                ((50, ('P', 'z'), [10], 'EE'),
+                 {10: (SubProofKind.existential, {('P', 'z'), ('Q',)})}),
+            ])
+        def test_good(proof, facts_by_index):
+            index, predicate, *_ = proof
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index, set(), set(), set())
+            assert facts_by_index == {k: v for k, v in facts.items() if k != index}
+            assert facts[index] == predicate
+            assert set() == preds
+            assert set() == funcs
+            assert set() == objs
+
+        @staticmethod
+        @pytest.mark.parametrize(
+            'proof, facts_by_index', [
+                ((50, ('P', 'z'), [10], 'EE'),
+                 {10: (SubProofKind.existential, {('Q', 'z')})}),
+                ((50, ('P',), [10], 'EE'),
+                 {10: (SubProofKind.existential, {('P', 'z'), ('Q',)})}),
+                ((50, ('P', 'z'), [], 'EE'),
+                 {10: (SubProofKind.existential, {('P', 'z'), ('Q',)})}),
+                ((50, ('P', 'z'), [10, 10], 'EE'),
+                 {10: (SubProofKind.existential, {('P', 'z'), ('Q',)})}),
+            ])
+        def test_bad(proof, facts_by_index):
+            with pytest.raises(InvalidProof):
+                validate_proof(proof, facts_by_index,
+                               set(), set(), set())
 
     class TestSupposition:
 
@@ -1117,10 +1151,14 @@ class TestValidateProof:
     @pytest.mark.parametrize(
         'proof, facts_by_index, result_facts', [
             ((35, [
-                (40, 'x', ('P', 'x')),
+                (40, 'x', ('P', 'x'), 30),
+                (50, ('Q', 'z'), [20], 'RE'),
             ]),
-             dict(),
-             {35: (SubProofKind.existential, 'x', set())}),
+             {20: ('Q', 'z'),
+              30: ('EXISTS', 'y', ('P', 'y'))},
+             {20: ('Q', 'z'),
+              30: ('EXISTS', 'y', ('P', 'y')),
+              35: (SubProofKind.existential, {('Q', 'z')})}),
             ((35, [
                 (40, 'x', ('P', 'x'), 20),
                 (45, [
@@ -1131,7 +1169,8 @@ class TestValidateProof:
                     (50, 'y', ('Q', 'y'), 33),
                     (55, ('R',), [10], 'RE'),
                 ]),
-                (60, ('Q', 'x'), [30], 'AE'),
+                (60, ('P', 'x'), [40], 'RE'),
+                (60, ('Q',), [30], 'AE'),
                 (65, [
                     (80, ('R',), [], 'S'),
                 ]),
@@ -1141,11 +1180,11 @@ class TestValidateProof:
             ]),
              {10: ('R',), 15: ('T',),
               20: ('EXISTS', 'x', ('P', 'x')),
-              30: ('FORALL', 'y', ('Q', 'y')),
+              30: ('FORALL', 'y', ('Q',)),
               33: ('EXISTS', 'y', ('Q', 'y'))},
              {10: ('R',), 20: ('P',),
-              30: ('FORALL', 'y', ('Q', 'y')),
-              35: (SubProofKind.existential, 'x', {('Q', 'x'), ('T',)})}),
+              30: ('FORALL', 'y', ('Q',)),
+              35: (SubProofKind.existential, {('Q',), ('T',)})}),
         ])
     @pytest.mark.skip
     def test_existential_sub_proof(proof, facts_by_index, result_facts,
