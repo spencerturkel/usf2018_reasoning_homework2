@@ -579,7 +579,22 @@ def validate_proof(proof, facts_by_line, seen_predicates, seen_functions, seen_o
                 pass  # TODO
 
             if rule == 'AE':
-                pass  # TODO
+                if len(cited_indices) != 1 or len(citations) != 1:
+                    raise InvalidProof
+
+                [cited_proof] = citations
+                tag, _, _ = cited_proof
+
+                if tag != 'FORALL':
+                    raise InvalidProof
+
+                for obj in seen_objects:
+                    if instantiate(obj, cited_proof, lambda: None) == predicate:
+                        facts = facts_by_line.copy()
+                        facts[index] = predicate
+                        return facts, seen_predicates, seen_functions, seen_objects
+
+                raise InvalidProof
 
             if rule == 'EI':
                 if len(cited_indices) != 1 or len(predicate) != 3:

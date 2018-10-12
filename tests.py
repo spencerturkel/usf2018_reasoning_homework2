@@ -772,7 +772,6 @@ class TestValidateProof:
     @pytest.mark.skip
     class TestUniversalIntroduction: pass
 
-    @pytest.mark.skip
     class TestUniversalElimination:
 
         @staticmethod
@@ -787,7 +786,7 @@ class TestValidateProof:
             ])
         def test_good(proof, facts_by_index, objects):
             index, predicate, *_ = proof
-            facts, preds, funcs, objs = validate_proof(proof, facts_by_index, objects)
+            facts, preds, funcs, objs = validate_proof(proof, facts_by_index, set(), set(), objects)
             assert facts_by_index == {k: v for k, v in facts.items() if k != index}
             assert facts[index] == predicate
             assert set() == preds
